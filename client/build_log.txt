@@ -1,0 +1,52 @@
+﻿[36mvite v7.3.0 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 3 modules transformed.
+node.exe : [31mΓ£ù[39m Build 
+failed in 211ms
+At line:1 char:1
++ & "D:\Coding and programing\Web 
+Developement\NodeJs/node.exe" 
+"C:\Use ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpe 
+   cified: ([31mΓ£ù[39m Build fai  
+  led in 211ms:String) [], RemoteE   
+ xception
+    + FullyQualifiedErrorId : Native 
+   CommandError
+ 
+[31merror during build:
+[31m[vite:css] [postcss] It looks 
+like you're trying to use 
+`tailwindcss` directly as a PostCSS 
+plugin. The PostCSS plugin has moved 
+to a separate package, so to 
+continue using Tailwind CSS with 
+PostCSS you'll need to install 
+`@tailwindcss/postcss` and update 
+your PostCSS configuration.[31m
+file: [36mD:/Coding and 
+programing/Web Developement/Dev-Duel/
+client/src/index.css:undefined:NaN[3
+1m
+    at lt (D:\Coding and 
+programing\Web Developement\Dev-Duel\
+client\node_modules\tailwindcss\dist\
+lib.js:38:1643)
+    at LazyResult.runOnRoot 
+(D:\Coding and programing\Web Develop
+ement\Dev-Duel\client\node_modules\po
+stcss\lib\lazy-result.js:361:16)
+    at LazyResult.runAsync 
+(D:\Coding and programing\Web Develop
+ement\Dev-Duel\client\node_modules\po
+stcss\lib\lazy-result.js:290:26)
+    at LazyResult.async (D:\Coding 
+and programing\Web Developement\Dev-D
+uel\client\node_modules\postcss\lib\l
+azy-result.js:192:30)
+    at LazyResult.then (D:\Coding 
+and programing\Web Developement\Dev-D
+uel\client\node_modules\postcss\lib\l
+azy-result.js:436:17)[39m
