@@ -2,7 +2,7 @@ const Medication = require('../models/Medication');
 
 const getMedications = async (req, res) => {
     try {
-        const medications = await Medication.find({ user: req.user.id });
+        const medications = await Medication.find({ user: req.user.id }).populate('prescribedBy', 'name');
         res.status(200).json(medications);
     } catch (error) {
         res.status(500).json({ message: error.message });

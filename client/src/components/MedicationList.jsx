@@ -55,6 +55,11 @@ export function MedicationList() {
                                     <div>
                                         <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">{med.name}</CardTitle>
                                         <p className="text-sm text-muted-foreground mt-1">{med.dosage}</p>
+                                        {med.prescribedBy && (
+                                            <p className="text-xs text-blue-600 font-medium mt-1">
+                                                Prescribed by Dr. {med.prescribedBy.name}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
