@@ -32,6 +32,10 @@ const medicationSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'completed', 'archived'],
         default: 'active'
+    },
+    prescribedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
 }, { timestamps: true });
 

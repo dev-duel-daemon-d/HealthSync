@@ -20,6 +20,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/medications', require('./routes/medicationRoutes'));
 app.use('/api/appointments', require('./routes/appointmentRoutes'));
 app.use('/api/logs', require('./routes/healthLogRoutes'));
+app.use('/api/doctor', require('./routes/doctorRoutes'));
 app.get('/', (req, res) => {
     res.send('HealthSync API is running');
 });
