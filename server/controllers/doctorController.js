@@ -58,42 +58,63 @@ const getPatientLogs = async (req, res) => {
     }
 };
 
-// @desc    Prescribe medication to a patient
+// @desc    Prescribe medication (Single or Batch)
 // @route   POST /api/doctor/prescribe
 // @access  Private (Doctor only)
 const prescribeMedication = async (req, res) => {
-    const { patientId, name, dosage, frequency, startDate } = req.body;
-
-    if (!patientId || !name || !dosage || !frequency) {
-        return res.status(400).json({ message: 'Please provide all required fields' });
-    }
-
     try {
+        const { patientId, medications, name, dosage, frequency, startDate, notes } = req.body;
+
         // Verify linkage
         if (!req.user.patients.includes(patientId)) {
             return res.status(403).json({ message: 'Not authorized to treat this patient' });
         }
 
-        const medication = await Medication.create({
-            user: patientId,
-            name,
-            dosage,
-            frequency,
-            startDate: startDate || new Date(),
-            prescribedBy: req.user._id,
-            status: 'active'
-        });
+        let createdMeds = [];
 
-        // CREATE NOTIFICATION FOR PATIENT
+        // Handle Batch
+        if (medications && Array.isArray(medications)) {
+            const medsToCreate = medications.map(med => ({
+                user: patientId,
+                name: med.name,
+                dosage: med.dosage,
+                frequency: med.frequency,
+                startDate: med.startDate || new Date(),
+                notes: notes, // Apply general notes to all
+                prescribedBy: req.user._id,
+                status: 'active'
+            }));
+            createdMeds = await Medication.insertMany(medsToCreate);
+        } 
+        // Handle Single (Legacy support)
+        else if (name && dosage && frequency) {
+            const med = await Medication.create({
+                user: patientId,
+                name,
+                dosage,
+                frequency,
+                startDate: startDate || new Date(),
+                notes,
+                prescribedBy: req.user._id,
+                status: 'active'
+            });
+            createdMeds = [med];
+        } else {
+            return res.status(400).json({ message: 'Please provide medication details' });
+        }
+
+        // Create Notification
+        const medNames = createdMeds.map(m => m.name).join(', ');
         await Notification.create({
             user: patientId,
             type: 'prescription',
-            message: `Dr. ${req.user.name} prescribed a new medication: ${name}`,
-            relatedId: medication._id
+            message: `Dr. ${req.user.name} prescribed new medication(s): ${medNames}`,
+            relatedId: createdMeds[0]._id // Link to the first one
         });
 
-        res.status(201).json(medication);
+        res.status(201).json(createdMeds);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Error creating prescription' });
     }
 };

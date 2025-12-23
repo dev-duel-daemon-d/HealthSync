@@ -600,23 +600,40 @@ function PatientCard({ patient }) {
 
 function PrescribeDialog({ patientId, patientName }) {
     const [open, setOpen] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        dosage: '',
-        frequency: 'Daily',
-        startDate: ''
-    });
+    const [medications, setMedications] = useState([
+        { name: '', dosage: '', frequency: 'Daily', startDate: new Date().toISOString().split('T')[0] }
+    ]);
+    const [notes, setNotes] = useState('');
+
+    const handleAddRow = () => {
+        setMedications([...medications, { name: '', dosage: '', frequency: 'Daily', startDate: new Date().toISOString().split('T')[0] }]);
+    };
+
+    const handleRemoveRow = (index) => {
+        if (medications.length === 1) return; // Keep at least one
+        const newMeds = [...medications];
+        newMeds.splice(index, 1);
+        setMedications(newMeds);
+    };
+
+    const handleChange = (index, field, value) => {
+        const newMeds = [...medications];
+        newMeds[index][field] = value;
+        setMedications(newMeds);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             await api.post('/doctor/prescribe', {
                 patientId,
-                ...formData
+                medications,
+                notes
             });
             setOpen(false);
-            setFormData({ name: '', dosage: '', frequency: 'Daily', startDate: '' });
-            alert(`Prescription sent to ${patientName}`);
+            setMedications([{ name: '', dosage: '', frequency: 'Daily', startDate: new Date().toISOString().split('T')[0] }]);
+            setNotes('');
+            alert(`Prescriptions sent to ${patientName}`);
         } catch (error) {
             console.error('Failed to prescribe', error);
             alert('Failed to send prescription');
@@ -631,54 +648,78 @@ function PrescribeDialog({ patientId, patientName }) {
                     New Prescription
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Prescribe for {patientName}</DialogTitle>
                     <DialogDescription>
-                        This will be added to the patient's medication schedule immediately.
+                        Add multiple medications to the patient's schedule.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="med-name">Medication Name</Label>
-                        <Input
-                            id="med-name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            required
+                <form onSubmit={handleSubmit} className="py-4 space-y-6">
+                    
+                    <div className="space-y-4">
+                        {medications.map((med, index) => (
+                            <div key={index} className="grid grid-cols-12 gap-3 items-end animate-slide-in">
+                                <div className="col-span-4">
+                                    <Label className={index !== 0 ? "sr-only" : ""}>Medication</Label>
+                                    <Input 
+                                        placeholder="Name" 
+                                        value={med.name} 
+                                        onChange={(e) => handleChange(index, 'name', e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <Label className={index !== 0 ? "sr-only" : ""}>Dosage</Label>
+                                    <Input 
+                                        placeholder="e.g. 10mg" 
+                                        value={med.dosage} 
+                                        onChange={(e) => handleChange(index, 'dosage', e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <Label className={index !== 0 ? "sr-only" : ""}>Frequency</Label>
+                                    <Input 
+                                        placeholder="Freq" 
+                                        value={med.frequency} 
+                                        onChange={(e) => handleChange(index, 'frequency', e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="text-red-500 hover:bg-red-50"
+                                        onClick={() => handleRemoveRow(index)}
+                                        disabled={medications.length === 1}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddRow} className="w-full border-dashed border-2">
+                        <Plus className="h-4 w-4 mr-2" /> Add Another Medication
+                    </Button>
+
+                    <div className="space-y-2">
+                        <Label>Instructions / Notes</Label>
+                        <textarea
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="Add general instructions (e.g., take with food)..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
                         />
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="med-dosage">Dosage</Label>
-                        <Input
-                            id="med-dosage"
-                            value={formData.dosage}
-                            onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="med-frequency">Frequency</Label>
-                        <Input
-                            id="med-frequency"
-                            value={formData.frequency}
-                            onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="med-start">Start Date</Label>
-                        <Input
-                            id="med-start"
-                            type="date"
-                            value={formData.startDate}
-                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                            required
-                        />
-                    </div>
+
                     <DialogFooter>
                         <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                            Confirm Prescription
+                            Confirm Prescriptions
                         </Button>
                     </DialogFooter>
                 </form>
