@@ -6,7 +6,10 @@ const {
     getMyPatients,
     getPatientLogs,
     prescribeMedication,
-    connectWithDoctor
+    connectWithDoctor,
+    getMyPrescriptions,
+    updatePrescription,
+    deletePrescription
 } = require('../controllers/doctorController');
 
 // Patient Routes
@@ -17,5 +20,8 @@ router.post('/generate-code', protect, doctorOnly, generateConnectionCode);
 router.get('/patients', protect, doctorOnly, getMyPatients);
 router.get('/patient/:patientId/logs', protect, doctorOnly, getPatientLogs);
 router.post('/prescribe', protect, doctorOnly, prescribeMedication);
+router.get('/prescriptions', protect, doctorOnly, getMyPrescriptions);
+router.put('/prescriptions/:id', protect, doctorOnly, updatePrescription);
+router.delete('/prescriptions/:id', protect, doctorOnly, deletePrescription);
 
 module.exports = router;

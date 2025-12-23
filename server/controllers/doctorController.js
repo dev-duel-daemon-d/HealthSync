@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Medication = require('../models/Medication');
 const HealthLog = require('../models/HealthLog');
+const Notification = require('../models/Notification');
 const crypto = require('crypto');
 
 // @desc    Generate a unique connection code for the doctor
@@ -9,7 +10,6 @@ const crypto = require('crypto');
 const generateConnectionCode = async (req, res) => {
     try {
         // Generate a simple 6-character code (e.g., 'DOC-A1B2')
-        // In a real app, ensure uniqueness with a loop or database check
         const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
         const code = `DOC-${randomPart}`;
 
@@ -83,6 +83,14 @@ const prescribeMedication = async (req, res) => {
             status: 'active'
         });
 
+        // CREATE NOTIFICATION FOR PATIENT
+        await Notification.create({
+            user: patientId,
+            type: 'prescription',
+            message: `Dr. ${req.user.name} prescribed a new medication: ${name}`,
+            relatedId: medication._id
+        });
+
         res.status(201).json(medication);
     } catch (error) {
         res.status(500).json({ message: 'Error creating prescription' });
@@ -113,14 +121,20 @@ const connectWithDoctor = async (req, res) => {
         }
 
         // Update both Doctor and Patient
-        // 1. Add Patient to Doctor's list
         doctor.patients.push(req.user._id);
         await doctor.save();
 
-        // 2. Add Doctor to Patient's list
         const patient = await User.findById(req.user._id);
         patient.doctors.push(doctor._id);
         await patient.save();
+
+        // CREATE NOTIFICATION FOR DOCTOR
+        await Notification.create({
+            user: doctor._id,
+            type: 'connection',
+            message: `New patient connected: ${patient.name}`,
+            relatedId: patient._id
+        });
 
         res.json({ message: `Successfully connected with Dr. ${doctor.name}` });
     } catch (error) {
@@ -129,10 +143,104 @@ const connectWithDoctor = async (req, res) => {
     }
 };
 
+// @desc    Get all prescriptions made by this doctor
+// @route   GET /api/doctor/prescriptions
+// @access  Private (Doctor only)
+const getMyPrescriptions = async (req, res) => {
+    try {
+        const prescriptions = await Medication.find({ prescribedBy: req.user._id })
+            .populate('user', 'name email')
+            .sort({ createdAt: -1 });
+        res.json(prescriptions);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching prescriptions' });
+    }
+};
+
+// @desc    Update a prescription (including End Time)
+// @route   PUT /api/doctor/prescriptions/:id
+// @access  Private (Doctor only)
+const updatePrescription = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, dosage, frequency, startDate, endDate, status } = req.body;
+
+        const medication = await Medication.findById(id);
+
+        if (!medication) {
+            return res.status(404).json({ message: 'Medication not found' });
+        }
+
+        // Verify this doctor prescribed it
+        if (medication.prescribedBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to edit this prescription' });
+        }
+
+        medication.name = name || medication.name;
+        medication.dosage = dosage || medication.dosage;
+        medication.frequency = frequency || medication.frequency;
+        medication.startDate = startDate || medication.startDate;
+        medication.endDate = endDate; // Allow setting or clearing (if null sent)
+        medication.status = status || medication.status;
+
+        await medication.save();
+
+        // Notify patient of update
+        await Notification.create({
+            user: medication.user,
+            type: 'prescription',
+            message: `Dr. ${req.user.name} updated your prescription for ${medication.name}`,
+            relatedId: medication._id
+        });
+
+        res.json(medication);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error updating prescription' });
+    }
+};
+
+// @desc    Delete a prescription
+// @route   DELETE /api/doctor/prescriptions/:id
+// @access  Private (Doctor only)
+const deletePrescription = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const medication = await Medication.findById(id);
+
+        if (!medication) {
+            return res.status(404).json({ message: 'Medication not found' });
+        }
+
+        // Verify authority
+        if (medication.prescribedBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to delete this prescription' });
+        }
+
+        // Notify patient before deletion (since we need the med details)
+        await Notification.create({
+            user: medication.user,
+            type: 'prescription',
+            message: `Dr. ${req.user.name} cancelled/removed your prescription for ${medication.name}`,
+            relatedId: null // ID is gone
+        });
+
+        await medication.deleteOne();
+
+        res.json({ message: 'Prescription removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error deleting prescription' });
+    }
+};
+
 module.exports = {
     generateConnectionCode,
     getMyPatients,
     getPatientLogs,
     prescribeMedication,
-    connectWithDoctor
+    connectWithDoctor,
+    getMyPrescriptions,
+    updatePrescription,
+    deletePrescription
 };

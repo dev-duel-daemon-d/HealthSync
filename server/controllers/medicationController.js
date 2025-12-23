@@ -2,6 +2,18 @@ const Medication = require('../models/Medication');
 
 const getMedications = async (req, res) => {
     try {
+        const currentDate = new Date();
+
+        // Auto-expire medications
+        await Medication.updateMany(
+            { 
+                user: req.user.id, 
+                status: 'active',
+                endDate: { $ne: null, $lt: currentDate } 
+            },
+            { $set: { status: 'completed' } }
+        );
+
         const medications = await Medication.find({ user: req.user.id }).populate('prescribedBy', 'name');
         res.status(200).json(medications);
     } catch (error) {

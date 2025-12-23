@@ -6,8 +6,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
-import { Users, UserPlus, Activity, Pill, Stethoscope, ClipboardList, Plus } from 'lucide-react';
+import { Users, UserPlus, Activity, Pill, Stethoscope, ClipboardList, Plus, Edit2, Calendar, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
+import VitalsChart from '@/components/VitalsChart';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function DoctorDashboard() {
     const { user } = useAuth();
@@ -37,9 +41,6 @@ export default function DoctorDashboard() {
 
     useEffect(() => {
         fetchPatients();
-        // If the user object already has the code, set it. 
-        // Note: The user object from context might be stale if the code was generated in a previous session but not refreshed. 
-        //Ideally we'd fetch the user profile again or rely on the code generation response.
     }, []);
 
     return (
@@ -72,39 +73,219 @@ export default function DoctorDashboard() {
                     </Card>
                 </div>
 
-                {/* Patient List */}
-                <div className="grid gap-6">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Users className="h-5 w-5 text-muted-foreground" />
-                        <h2 className="text-xl font-semibold">Your Patients</h2>
-                    </div>
-                    
-                    {loading ? (
-                         <div className="flex items-center justify-center p-12">
-                            <div className="h-8 w-8 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+                <Tabs defaultValue="patients" className="w-full">
+                    <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+                        <TabsTrigger value="patients">My Patients</TabsTrigger>
+                        <TabsTrigger value="prescriptions">Active Prescriptions</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="patients" className="space-y-6">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Users className="h-5 w-5 text-muted-foreground" />
+                            <h2 className="text-xl font-semibold">Your Patients</h2>
                         </div>
-                    ) : patients.length === 0 ? (
-                        <Card className="border-dashed">
-                            <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                                <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/20 mb-4">
-                                    <Users className="h-8 w-8 text-blue-500" />
-                                </div>
-                                <h3 className="text-lg font-medium">No patients yet</h3>
-                                <p className="text-muted-foreground max-w-sm mt-2">
-                                    Share your connection code with your patients so they can link their account to you.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {patients.map(patient => (
-                                <PatientCard key={patient._id} patient={patient} />
-                            ))}
-                        </div>
-                    )}
-                </div>
+                        
+                        {loading ? (
+                             <div className="flex items-center justify-center p-12">
+                                <div className="h-8 w-8 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+                            </div>
+                        ) : patients.length === 0 ? (
+                            <Card className="border-dashed">
+                                <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                                    <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/20 mb-4">
+                                        <Users className="h-8 w-8 text-blue-500" />
+                                    </div>
+                                    <h3 className="text-lg font-medium">No patients yet</h3>
+                                    <p className="text-muted-foreground max-w-sm mt-2">
+                                        Share your connection code with your patients so they can link their account to you.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {patients.map(patient => (
+                                    <PatientCard key={patient._id} patient={patient} />
+                                ))}
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="prescriptions">
+                        <PrescriptionsList />
+                    </TabsContent>
+                </Tabs>
             </div>
         </Layout>
+    );
+}
+
+function PrescriptionsList() {
+    const [prescriptions, setPrescriptions] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchPrescriptions = async () => {
+        try {
+            const { data } = await api.get('/doctor/prescriptions');
+            setPrescriptions(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPrescriptions();
+    }, []);
+
+    const handleDelete = async (id) => {
+        if (!confirm('Are you sure you want to remove this prescription? The patient will be notified.')) return;
+        try {
+            await api.delete(`/doctor/prescriptions/${id}`);
+            fetchPrescriptions();
+        } catch (error) {
+            console.error('Failed to delete', error);
+            alert('Failed to delete prescription');
+        }
+    };
+
+    if (loading) return <div>Loading...</div>;
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>All Prescriptions</CardTitle>
+                <CardDescription>Manage medications you have prescribed to your patients.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {prescriptions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No active prescriptions.</div>
+                ) : (
+                    <div className="rounded-md border">
+                        <div className="relative w-full overflow-auto">
+                            <table className="w-full caption-bottom text-sm text-left">
+                                <thead className="[&_tr]:border-b">
+                                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Patient</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Medication</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Dosage</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">End Date</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="[&_tr:last-child]:border-0">
+                                    {prescriptions.map((p) => (
+                                        <tr key={p._id} className="border-b transition-colors hover:bg-muted/50">
+                                            <td className="p-4 align-middle font-medium">{p.user?.name}</td>
+                                            <td className="p-4 align-middle">{p.name}</td>
+                                            <td className="p-4 align-middle">
+                                                <div className="flex flex-col">
+                                                    <span>{p.dosage}</span>
+                                                    <span className="text-xs text-muted-foreground">{p.frequency}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                {p.endDate ? (
+                                                    new Date(p.endDate).toLocaleDateString()
+                                                ) : (
+                                                    <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">Ongoing</Badge>
+                                                )}
+                                            </td>
+                                            <td className="p-4 align-middle text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <EditPrescriptionDialog prescription={p} onUpdate={fetchPrescriptions} />
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => handleDelete(p._id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+function EditPrescriptionDialog({ prescription, onUpdate }) {
+    const [open, setOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        dosage: prescription.dosage,
+        frequency: prescription.frequency,
+        endDate: prescription.endDate ? new Date(prescription.endDate).toISOString().split('T')[0] : ''
+    });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await api.put(`/doctor/prescriptions/${prescription._id}`, formData);
+            setOpen(false);
+            onUpdate();
+        } catch (error) {
+            console.error('Failed to update', error);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Edit2 className="h-4 w-4 text-blue-600" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Edit Prescription</DialogTitle>
+                    <DialogDescription>
+                        Update details for {prescription.name} (Patient: {prescription.user?.name})
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-dosage">Dosage</Label>
+                        <Input
+                            id="edit-dosage"
+                            value={formData.dosage}
+                            onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-frequency">Frequency</Label>
+                        <Input
+                            id="edit-frequency"
+                            value={formData.frequency}
+                            onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-end">End Date (Optional)</Label>
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="edit-end"
+                                type="date"
+                                className="pl-10"
+                                value={formData.endDate}
+                                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                            />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Leave blank for ongoing medication.</p>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" className="bg-blue-600">Save Changes</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -170,6 +351,17 @@ function PatientCard({ patient }) {
                             <PrescribeDialog patientId={patient._id} patientName={patient.name} />
                         </div>
                     </div>
+
+                    {/* Charts Section */}
+                    {logs.length > 0 && (
+                        <div>
+                            <h3 className="font-semibold flex items-center gap-2 mb-4">
+                                <Activity className="h-4 w-4 text-rose-500" />
+                                Vitals Trends
+                            </h3>
+                            <VitalsChart logs={logs} />
+                        </div>
+                    )}
 
                     {/* Health Logs Section */}
                     <div>
