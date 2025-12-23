@@ -5,7 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar, MapPin, Plus, User } from 'lucide-react';
+import { Calendar, MapPin, Plus, User, Clock, MessageSquare } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import ChatWindow from './ChatWindow';
+
+// Helper function to check if chat should be active
+const isChatActive = (appointmentDate) => {
+    const now = new Date();
+    const aptTime = new Date(appointmentDate);
+    const oneHourBefore = new Date(aptTime.getTime() - (60 * 60 * 1000));
+    const twentyFourHoursAfter = new Date(aptTime.getTime() + (24 * 60 * 60 * 1000));
+
+    return now >= oneHourBefore && now <= twentyFourHoursAfter;
+};
 
 export function AppointmentList() {
     const [appointments, setAppointments] = useState([]);
@@ -25,6 +37,15 @@ export function AppointmentList() {
     useEffect(() => {
         fetchAppointments();
     }, []);
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'confirmed': return 'bg-green-100 text-green-700 border-green-200';
+            case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+            case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+            default: return 'bg-purple-100 text-purple-700 border-purple-200';
+        }
+    };
 
     if (loading) {
         return (
@@ -59,11 +80,14 @@ export function AppointmentList() {
                                         </p>
                                     </div>
                                 </div>
+                                <Badge variant="outline" className={`capitalize ${getStatusColor(apt.status)}`}>
+                                    {apt.status || 'upcoming'}
+                                </Badge>
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-2">
                             <div className="flex items-center gap-2 text-sm">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <Clock className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-medium">{new Date(apt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                             <div className="flex items-center gap-2 text-sm">
@@ -73,6 +97,33 @@ export function AppointmentList() {
                             {apt.notes && (
                                 <div className="mt-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900">
                                     <p className="text-sm italic text-purple-900 dark:text-purple-100">"{apt.notes}"</p>
+                                </div>
+                            )}
+
+                            {/* Chat Integration */}
+                            {apt.status === 'confirmed' && (
+                                <div className="mt-4 pt-4 border-t">
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full gap-2 border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                                                disabled={!isChatActive(apt.date)}
+                                            >
+                                                <MessageSquare className="h-4 w-4" />
+                                                Chat with Doctor
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-[500px] p-0 border-0 bg-transparent shadow-none">
+                                            <ChatWindow appointmentId={apt._id} otherPartyName={apt.doctorName} />
+                                        </DialogContent>
+                                    </Dialog>
+                                    {!isChatActive(apt.date) && (
+                                        <p className="text-[10px] text-center text-muted-foreground mt-1">
+                                            Chat opens 1 hour before your appointment.
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </CardContent>
@@ -92,25 +143,44 @@ export function AppointmentList() {
 
 export function AddAppointmentDialog({ onAdded }) {
     const [open, setOpen] = useState(false);
+    const [doctors, setDoctors] = useState([]);
     const [formData, setFormData] = useState({
-        doctorName: '',
+        doctorId: '',
         date: '',
         time: '',
         location: '',
         notes: ''
     });
 
+    useEffect(() => {
+        const fetchDoctors = async () => {
+            try {
+                const { data } = await api.get('/patient/doctors');
+                setDoctors(data);
+            } catch (error) {
+                console.error('Failed to fetch doctors', error);
+            }
+        };
+        if (open) fetchDoctors();
+    }, [open]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const dateTime = new Date(`${formData.date}T${formData.time}`);
+            
+            // Find selected doctor name
+            const selectedDoc = doctors.find(d => d._id === formData.doctorId);
+            const doctorName = selectedDoc ? selectedDoc.name : 'Unknown';
 
             await api.post('/appointments', {
                 ...formData,
+                doctor: formData.doctorId, // Send ID for linking
+                doctorName: `Dr. ${doctorName}`, // Send name for display fallback
                 date: dateTime
             });
             setOpen(false);
-            setFormData({ doctorName: '', date: '', time: '', location: '', notes: '' });
+            setFormData({ doctorId: '', date: '', time: '', location: '', notes: '' });
             onAdded();
         } catch (error) {
             console.error(error);
@@ -133,12 +203,25 @@ export function AddAppointmentDialog({ onAdded }) {
                         </div>
                         New Appointment
                     </DialogTitle>
-                    <DialogDescription>Schedule a new appointment with your healthcare provider.</DialogDescription>
+                    <DialogDescription>Request an appointment with your care team.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label>Doctor Name</Label>
-                        <Input placeholder="Dr. Smith" value={formData.doctorName} onChange={e => setFormData({ ...formData, doctorName: e.target.value })} required />
+                        <Label>Select Doctor</Label>
+                        <select 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            value={formData.doctorId}
+                            onChange={e => setFormData({ ...formData, doctorId: e.target.value })}
+                            required
+                        >
+                            <option value="" disabled>Select a provider...</option>
+                            {doctors.map(doc => (
+                                <option key={doc._id} value={doc._id}>Dr. {doc.name} ({doc.specialization || 'General'})</option>
+                            ))}
+                        </select>
+                        {doctors.length === 0 && (
+                            <p className="text-xs text-red-500">You need to connect with a doctor first.</p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
@@ -152,15 +235,15 @@ export function AddAppointmentDialog({ onAdded }) {
                     </div>
                     <div className="grid gap-2">
                         <Label>Location</Label>
-                        <Input placeholder="City Hospital" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} required />
+                        <Input placeholder="Online / Clinic" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} required />
                     </div>
                     <div className="grid gap-2">
-                        <Label>Notes (Optional)</Label>
+                        <Label>Notes (Reason)</Label>
                         <Input placeholder="Routine checkup..." value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
                     </div>
                     <DialogFooter>
-                        <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-                            Schedule Appointment
+                        <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600" disabled={!formData.doctorId}>
+                            Request Appointment
                         </Button>
                     </DialogFooter>
                 </form>

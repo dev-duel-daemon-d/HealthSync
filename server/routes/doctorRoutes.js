@@ -9,7 +9,9 @@ const {
     connectWithDoctor,
     getMyPrescriptions,
     updatePrescription,
-    deletePrescription
+    deletePrescription,
+    getDoctorAppointments,
+    updateAppointmentStatus
 } = require('../controllers/doctorController');
 
 // Patient Routes
@@ -23,5 +25,9 @@ router.post('/prescribe', protect, doctorOnly, prescribeMedication);
 router.get('/prescriptions', protect, doctorOnly, getMyPrescriptions);
 router.put('/prescriptions/:id', protect, doctorOnly, updatePrescription);
 router.delete('/prescriptions/:id', protect, doctorOnly, deletePrescription);
+
+// Doctor Appointment Routes
+router.get('/appointments', protect, doctorOnly, getDoctorAppointments);
+router.patch('/appointments/:id/status', protect, doctorOnly, updateAppointmentStatus);
 
 module.exports = router;

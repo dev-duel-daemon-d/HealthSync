@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Medication = require('../models/Medication');
 const HealthLog = require('../models/HealthLog');
 const Notification = require('../models/Notification');
+const Appointment = require('../models/Appointment');
 const crypto = require('crypto');
 
 // @desc    Generate a unique connection code for the doctor
@@ -234,6 +235,57 @@ const deletePrescription = async (req, res) => {
     }
 };
 
+// @desc    Get appointments for this doctor
+// @route   GET /api/doctor/appointments
+// @access  Private (Doctor only)
+const getDoctorAppointments = async (req, res) => {
+    try {
+        console.log('--- GET DOCTOR APPOINTMENTS DEBUG ---');
+        console.log('Doctor ID (req.user._id):', req.user._id);
+
+        const appointments = await Appointment.find({ doctor: req.user._id })
+            .populate('user', 'name email')
+            .sort({ date: 1 });
+
+        console.log('Found Count:', appointments.length);
+        console.log('-----------------------------------');
+        res.json(appointments);
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+        res.status(500).json({ message: 'Error fetching appointments' });
+    }
+};
+
+// @desc    Update appointment status (Confirm/Cancel)
+// @route   PATCH /api/doctor/appointments/:id/status
+// @access  Private (Doctor only)
+const updateAppointmentStatus = async (req, res) => {
+    try {
+        const { status } = req.body; // 'confirmed', 'cancelled'
+        const appointment = await Appointment.findById(req.params.id);
+
+        if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+        if (appointment.doctor.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        appointment.status = status;
+        await appointment.save();
+
+        // Notify Patient
+        await Notification.create({
+            user: appointment.user,
+            type: 'appointment',
+            message: `Dr. ${req.user.name} has ${status} your appointment for ${new Date(appointment.date).toLocaleDateString()}`,
+            relatedId: appointment._id
+        });
+
+        res.json(appointment);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating appointment' });
+    }
+};
+
 module.exports = {
     generateConnectionCode,
     getMyPatients,
@@ -242,5 +294,7 @@ module.exports = {
     connectWithDoctor,
     getMyPrescriptions,
     updatePrescription,
-    deletePrescription
+    deletePrescription,
+    getDoctorAppointments,
+    updateAppointmentStatus
 };

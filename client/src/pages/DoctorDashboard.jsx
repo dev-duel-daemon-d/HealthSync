@@ -6,12 +6,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
-import { Users, UserPlus, Activity, Pill, Stethoscope, ClipboardList, Plus, Edit2, Calendar, Trash2, ShieldAlert } from 'lucide-react';
+import { Users, UserPlus, Activity, Pill, Stethoscope, ClipboardList, Plus, Edit2, Calendar, Trash2, ShieldAlert, Check, X, Clock, MessageSquare } from 'lucide-react';
 import Layout from '@/components/Layout';
 import VitalsChart from '@/components/VitalsChart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ChatWindow from '@/components/ChatWindow';
+
+// Helper function to check if chat should be active
+const isChatActive = (appointmentDate) => {
+    const now = new Date();
+    const aptTime = new Date(appointmentDate);
+    const oneHourBefore = new Date(aptTime.getTime() - (60 * 60 * 1000));
+    const twentyFourHoursAfter = new Date(aptTime.getTime() + (24 * 60 * 60 * 1000));
+
+    return now >= oneHourBefore && now <= twentyFourHoursAfter;
+};
 
 export default function DoctorDashboard() {
     const { user } = useAuth();
@@ -105,9 +116,10 @@ export default function DoctorDashboard() {
                 </div>
 
                 <Tabs defaultValue="patients" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+                    <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">
                         <TabsTrigger value="patients">My Patients</TabsTrigger>
-                        <TabsTrigger value="prescriptions">Active Prescriptions</TabsTrigger>
+                        <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
+                        <TabsTrigger value="appointments">Appointments</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="patients" className="space-y-6">
@@ -144,9 +156,158 @@ export default function DoctorDashboard() {
                     <TabsContent value="prescriptions">
                         <PrescriptionsList />
                     </TabsContent>
+
+                    <TabsContent value="appointments">
+                        <DoctorAppointmentsList />
+                    </TabsContent>
                 </Tabs>
             </div>
         </Layout>
+    );
+}
+
+function DoctorAppointmentsList() {
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchAppointments = async () => {
+        try {
+            const { data } = await api.get('/doctor/appointments');
+            setAppointments(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async (id, status) => {
+        try {
+            await api.patch(`/doctor/appointments/${id}/status`, { status });
+            fetchAppointments();
+        } catch (error) {
+            console.error('Failed to update status', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
+
+    const pending = appointments.filter(a => a.status === 'pending');
+    const upcoming = appointments.filter(a => a.status === 'confirmed');
+
+    if (loading) return <div>Loading...</div>;
+
+    return (
+        <div className="space-y-6">
+            {/* Pending Requests */}
+            <Card className="border-l-4 border-l-yellow-500">
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-yellow-600" />
+                        Pending Requests
+                        <Badge variant="secondary" className="ml-2">{pending.length}</Badge>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {pending.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No pending appointment requests.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {pending.map(apt => (
+                                <div key={apt._id} className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-100 dark:border-yellow-900">
+                                    <div>
+                                        <p className="font-semibold">{apt.user?.name}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {new Date(apt.date).toLocaleDateString()} at {new Date(apt.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                        </p>
+                                        {apt.notes && <p className="text-xs italic mt-1">"{apt.notes}"</p>}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(apt._id, 'confirmed')}>
+                                            <Check className="h-4 w-4 mr-1" /> Confirm
+                                        </Button>
+                                        <Button size="sm" variant="destructive" onClick={() => handleStatusUpdate(apt._id, 'cancelled')}>
+                                            <X className="h-4 w-4 mr-1" /> Reject
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Upcoming Schedule */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                        Upcoming Schedule
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {upcoming.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No confirmed upcoming appointments.</p>
+                    ) : (
+                        <div className="relative w-full overflow-auto">
+                            <table className="w-full caption-bottom text-sm text-left">
+                                <thead className="[&_tr]:border-b">
+                                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Patient</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-center">Chat</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="[&_tr:last-child]:border-0">
+                                    {upcoming.map((apt) => (
+                                        <tr key={apt._id} className="border-b transition-colors hover:bg-muted/50">
+                                            <td className="p-4 align-middle font-medium">
+                                                <div className="flex flex-col">
+                                                    <span>{new Date(apt.date).toLocaleDateString()}</span>
+                                                    <span className="text-xs text-muted-foreground">{new Date(apt.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 align-middle font-semibold">{apt.user?.name}</td>
+                                            <td className="p-4 align-middle">{apt.location}</td>
+                                            <td className="p-4 align-middle text-center">
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="ghost" 
+                                                            className="text-blue-600 hover:bg-blue-50 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            disabled={!isChatActive(apt.date)}
+                                                        >
+                                                            <MessageSquare className="h-4 w-4" />
+                                                            Chat
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-[500px] p-0 border-0 bg-transparent shadow-none">
+                                                        <ChatWindow appointmentId={apt._id} otherPartyName={apt.user?.name} />
+                                                    </DialogContent>
+                                                </Dialog>
+                                                {!isChatActive(apt.date) && (
+                                                    <p className="text-[10px] text-muted-foreground">Inactive</p>
+                                                )}
+                                            </td>
+                                            <td className="p-4 align-middle text-right">
+                                                <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => handleStatusUpdate(apt._id, 'cancelled')}>
+                                                    Cancel
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
     );
 }
 
