@@ -67,7 +67,7 @@ export default function LandingPage() {
               onClick={handleBookNow}
               className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-medium hover:shadow-2xl hover:scale-105 transform transition-all duration-300"
             >
-              Book Now
+              Get Started
             </button>
           </div>
         </div>
