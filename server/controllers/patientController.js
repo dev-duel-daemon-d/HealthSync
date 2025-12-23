@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Medication = require('../models/Medication');
 
 // @desc    Get list of doctors for the current patient
 // @route   GET /api/patient/doctors
@@ -21,17 +22,23 @@ const removeDoctor = async (req, res) => {
         const { doctorId } = req.params;
         const patientId = req.user._id;
 
-        // 1. Remove doctor from patient's list
+        // 1. Handover (Conversion): Convert doctor-managed meds to self-managed
+        await Medication.updateMany(
+            { user: patientId, prescribedBy: doctorId },
+            { $set: { prescribedBy: null } }
+        );
+
+        // 2. Remove doctor from patient's list
         await User.findByIdAndUpdate(patientId, {
             $pull: { doctors: doctorId }
         });
 
-        // 2. Remove patient from doctor's list
+        // 3. Remove patient from doctor's list
         await User.findByIdAndUpdate(doctorId, {
             $pull: { patients: patientId }
         });
 
-        res.json({ message: 'Doctor removed successfully' });
+        res.json({ message: 'Doctor removed successfully. Prescribed medications have been converted to self-managed.' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error removing doctor' });

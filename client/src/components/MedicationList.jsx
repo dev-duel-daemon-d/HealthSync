@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Pill, Plus, Clock, Calendar } from 'lucide-react';
+import { Pill, Plus, Clock, Calendar, Edit2, Trash2 } from 'lucide-react';
 
 export function MedicationList() {
     const [medications, setMedications] = useState([]);
@@ -19,6 +19,16 @@ export function MedicationList() {
             console.error('Failed to fetch meds', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Are you sure you want to delete this medication?')) return;
+        try {
+            await api.delete(`/medications/${id}`);
+            fetchMedications();
+        } catch (error) {
+            console.error('Failed to delete', error);
         }
     };
 
@@ -55,13 +65,32 @@ export function MedicationList() {
                                     <div>
                                         <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">{med.name}</CardTitle>
                                         <p className="text-sm text-muted-foreground mt-1">{med.dosage}</p>
-                                        {med.prescribedBy && (
+                                        {med.prescribedBy ? (
                                             <p className="text-xs text-blue-600 font-medium mt-1">
                                                 Prescribed by Dr. {med.prescribedBy.name}
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-slate-500 font-medium mt-1 italic">
+                                                Self-managed
                                             </p>
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Management Actions for Patients */}
+                                {!med.prescribedBy && (
+                                    <div className="flex items-center gap-1">
+                                        <EditMedicationDialog medication={med} onMedicationUpdated={fetchMedications} />
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50"
+                                            onClick={() => handleDelete(med._id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-2">
@@ -92,6 +121,87 @@ export function MedicationList() {
                 )}
             </div>
         </div>
+    );
+}
+
+export function EditMedicationDialog({ medication, onMedicationUpdated }) {
+    const [open, setOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        name: medication.name,
+        dosage: medication.dosage,
+        frequency: medication.frequency,
+        timeOfIntake: medication.timeOfIntake.join(', ')
+    });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                ...formData,
+                timeOfIntake: formData.timeOfIntake.split(',').map(t => t.trim())
+            };
+            await api.put(`/medications/${medication._id}`, payload);
+            setOpen(false);
+            onMedicationUpdated();
+        } catch (error) {
+            console.error('Failed to update medication', error);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-500 hover:bg-blue-50">
+                    <Edit2 className="h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Edit Medication</DialogTitle>
+                    <DialogDescription>Update your medication details.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-name">Name</Label>
+                        <Input
+                            id="edit-name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            required
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-dosage">Dosage</Label>
+                        <Input
+                            id="edit-dosage"
+                            value={formData.dosage}
+                            onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                            required
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-frequency">Frequency</Label>
+                        <Input
+                            id="edit-frequency"
+                            value={formData.frequency}
+                            onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                            required
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-time">Times (comma separated)</Label>
+                        <Input
+                            id="edit-time"
+                            value={formData.timeOfIntake}
+                            onChange={(e) => setFormData({ ...formData, timeOfIntake: e.target.value })}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" className="w-full">Save Changes</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
 
