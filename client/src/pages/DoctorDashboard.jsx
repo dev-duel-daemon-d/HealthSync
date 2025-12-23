@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
-import { Users, UserPlus, Activity, Pill, Stethoscope, ClipboardList, Plus, Edit2, Calendar, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Activity, Pill, Stethoscope, ClipboardList, Plus, Edit2, Calendar, Trash2, ShieldAlert } from 'lucide-react';
 import Layout from '@/components/Layout';
 import VitalsChart from '@/components/VitalsChart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +18,37 @@ export default function DoctorDashboard() {
     const [patients, setPatients] = useState([]);
     const [connectionCode, setConnectionCode] = useState(user?.connectionCode || null);
     const [loading, setLoading] = useState(true);
+
+    // Verification Pending View
+    if (user?.status === 'pending') {
+        return (
+            <Layout>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <Card className="max-w-md w-full text-center border-l-4 border-l-yellow-500 animate-slide-up">
+                        <CardHeader>
+                            <div className="mx-auto p-3 bg-yellow-100 rounded-full text-yellow-600 mb-2">
+                                <ShieldAlert className="h-8 w-8" />
+                            </div>
+                            <CardTitle className="text-xl">Verification Pending</CardTitle>
+                            <CardDescription>
+                                Thank you for registering Dr. {user.name}.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <p className="text-muted-foreground">
+                                Your account is currently under review by our administrative team. 
+                                To ensure patient safety, we must verify your medical credentials before granting access to patient data.
+                            </p>
+                            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm text-slate-600 dark:text-slate-400">
+                                <p className="font-semibold mb-1">Estimated Review Time:</p>
+                                <p>24 - 48 Hours</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </Layout>
+        );
+    }
 
     const fetchPatients = async () => {
         try {

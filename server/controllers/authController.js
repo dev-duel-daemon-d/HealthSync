@@ -20,7 +20,7 @@ const generateRefreshToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, licenseNumber } = req.body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please add all fields' });
@@ -37,12 +37,17 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Default status: Patients are approved immediately, Doctors are pending
+    const initialStatus = role === 'doctor' ? 'pending' : 'approved';
+
     // Create user
     const user = await User.create({
         name,
         email,
         password: hashedPassword,
-        role: role || 'patient'
+        role: role || 'patient',
+        status: initialStatus,
+        licenseNumber: licenseNumber || ''
     });
 
     if (user) {
@@ -61,6 +66,7 @@ const registerUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            status: user.status,
             token: generateAccessToken(user._id)
         });
     } else {
@@ -98,6 +104,7 @@ const loginUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            status: user.status,
             token: generateAccessToken(user._id)
         });
     } else {

@@ -33,7 +33,11 @@ const protect = async (req, res, next) => {
 
 const doctorOnly = (req, res, next) => {
     if (req.user && req.user.role === 'doctor') {
-        next();
+        if (req.user.status === 'approved') {
+            next();
+        } else {
+            res.status(403).json({ message: 'Access denied: Your account is pending approval.' });
+        }
     } else {
         res.status(403).json({ message: 'Access denied: Doctors only' });
     }

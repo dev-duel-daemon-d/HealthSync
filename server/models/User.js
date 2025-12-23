@@ -27,6 +27,14 @@ const userSchema = new mongoose.Schema({
         unique: true,
         sparse: true // Allows null/undefined values to not conflict
     },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'approved'
+    },
+    licenseNumber: {
+        type: String
+    },
     doctors: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
