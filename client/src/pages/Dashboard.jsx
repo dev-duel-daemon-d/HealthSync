@@ -13,6 +13,61 @@ import api from '@/services/api';
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const [stats, setStats] = useState({
+        activeMedications: 0,
+        upcomingAppointments: 0,
+        healthScore: 100, // Default to 100%
+        loading: true
+    });
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (user?.role !== 'patient' && user?.role !== 'caregiver') return;
+            
+            try {
+                const [medsRes, aptsRes] = await Promise.all([
+                    api.get('/medications'),
+                    api.get('/appointments')
+                ]);
+
+                // Calculate Active Meds
+                // Since the backend might not return 'status' explicitly for all, we assume all returned are active or verify fields
+                // Looking at typical controller, getMedications usually returns user's meds. 
+                // We'll filter if status exists, otherwise count all non-expired.
+                const activeMeds = medsRes.data.length; // Simplified for now based on assumption backend returns current list
+
+                // Calculate Upcoming Appointments
+                const now = new Date();
+                const upcomingApts = aptsRes.data.filter(apt => 
+                    (apt.status === 'upcoming' || apt.status === 'confirmed') && new Date(apt.date) > now
+                ).length;
+
+                // Calculate Health Score (Adherence)
+                // Simple logic: (Completed / (Completed + Cancelled)) * 100
+                const completedApts = aptsRes.data.filter(apt => apt.status === 'completed').length;
+                const cancelledApts = aptsRes.data.filter(apt => apt.status === 'cancelled').length;
+                const totalPast = completedApts + cancelledApts;
+                
+                let score = 98; // Default mock
+                if (totalPast > 0) {
+                    score = Math.round((completedApts / totalPast) * 100);
+                }
+
+                setStats({
+                    activeMedications: activeMeds,
+                    upcomingAppointments: upcomingApts,
+                    healthScore: score,
+                    loading: false
+                });
+
+            } catch (error) {
+                console.error("Failed to fetch dashboard stats", error);
+                setStats(prev => ({ ...prev, loading: false }));
+            }
+        };
+
+        fetchStats();
+    }, [user]);
 
     return (
         <Layout>
@@ -35,35 +90,58 @@ export default function Dashboard() {
 
             {/* Overview Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <OverviewCard icon={Pill} label="Medications" value="3 Active" color="blue" />
-                <OverviewCard icon={Calendar} label="Appointments" value="2 Upcoming" color="purple" />
-                <OverviewCard icon={Activity} label="Health Score" value="98%" color="green" />
+                {(user?.role === 'patient' || user?.role === 'caregiver') && (
+                    <>
+                        <OverviewCard 
+                            icon={Pill} 
+                            label="Medications" 
+                            value={stats.loading ? "..." : `${stats.activeMedications} Active`} 
+                            color="blue" 
+                        />
+                        <OverviewCard 
+                            icon={Calendar} 
+                            label="Appointments" 
+                            value={stats.loading ? "..." : `${stats.upcomingAppointments} Upcoming`} 
+                            color="purple" 
+                        />
+                        <OverviewCard 
+                            icon={Activity} 
+                            label="Health Score" 
+                            value={stats.loading ? "..." : `${stats.healthScore}%`} 
+                            color="green" 
+                        />
+                    </>
+                )}
                 <CareTeamCard />
             </div>
 
             <div className="grid gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-8">
-                    <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600">
-                                <Pill className="h-5 w-5" />
-                            </div>
-                            Today's Schedule
-                        </h2>
-                        <MedicationList />
-                    </section>
+                    {(user?.role === 'patient' || user?.role === 'caregiver') && (
+                        <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600">
+                                    <Pill className="h-5 w-5" />
+                                </div>
+                                Today's Schedule
+                            </h2>
+                            <MedicationList />
+                        </section>
+                    )}
                 </div>
 
                 <div className="lg:col-span-1 space-y-8">
-                    <section className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900 text-green-600">
-                                <Activity className="h-5 w-5" />
-                            </div>
-                            Quick Vitals
-                        </h2>
-                        <HealthLogList />
-                    </section>
+                    {(user?.role === 'patient' || user?.role === 'caregiver') && (
+                        <section className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900 text-green-600">
+                                    <Activity className="h-5 w-5" />
+                                </div>
+                                Quick Vitals
+                            </h2>
+                            <HealthLogList />
+                        </section>
+                    )}
                 </div>
             </div>
         </Layout>

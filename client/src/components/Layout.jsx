@@ -11,12 +11,16 @@ export default function Layout({ children }) {
 
     const navItems = [
         { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-        { label: 'Medications', path: '/medications', icon: Pill },
-        { label: 'Appointments', path: '/appointments', icon: Calendar },
-        { label: 'Wellness', path: '/wellness', icon: Activity },
-        { label: 'Education', path: '/education', icon: BookOpen },
+        { label: 'Medications', path: '/medications', icon: Pill, roles: ['patient', 'caregiver'] },
+        { label: 'Appointments', path: '/appointments', icon: Calendar, roles: ['patient', 'caregiver'] },
+        { label: 'Wellness', path: '/wellness', icon: Activity, roles: ['patient', 'caregiver'] },
+        { label: 'Education', path: '/education', icon: BookOpen, roles: ['patient', 'caregiver'] },
         { label: 'Settings', path: '/profile', icon: Settings },
     ];
+
+    const filteredNavItems = navItems.filter(item => 
+        !item.roles || (user?.role && item.roles.includes(user.role))
+    );
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-indigo-950 dark:to-purple-950 flex flex-col md:flex-row">
@@ -39,7 +43,7 @@ export default function Layout({ children }) {
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     {/* Desktop Notification Bell entry (optional, but let's put it in the profile area instead) */}
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname === item.path;
                         return (

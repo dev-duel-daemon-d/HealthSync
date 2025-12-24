@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar, MapPin, Plus, User, Clock, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ChatWindow from './ChatWindow';
+import CalendarSync from './CalendarSync';
 
 // Helper function to check if chat should be active
 const isChatActive = (appointmentDate) => {
@@ -124,6 +125,7 @@ export function AppointmentList() {
                                             Chat opens 1 hour before your appointment.
                                         </p>
                                     )}
+                                    <CalendarSync appointment={apt} />
                                 </div>
                             )}
                         </CardContent>
