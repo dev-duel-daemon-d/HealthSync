@@ -21,12 +21,29 @@ const seedData = async () => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash('password123', salt);
 
+        console.log('Creating users...');
+        
+        const doctor = await User.create({
+            name: 'Smith',
+            email: 'doctor@example.com',
+            password: hashedPassword,
+            role: 'doctor',
+            specialization: 'Cardiology',
+            licenseNumber: 'MD-99887',
+            status: 'approved'
+        });
+
         const patient = await User.create({
             name: 'John Doe',
             email: 'patient@example.com',
             password: hashedPassword,
-            role: 'patient'
+            role: 'patient',
+            doctors: [doctor._id] // Link to doctor
         });
+
+        // Add patient to doctor's list
+        doctor.patients = [patient._id];
+        await doctor.save();
 
         const caregiver = await User.create({
             name: 'Jane Caregiver',
@@ -43,7 +60,8 @@ const seedData = async () => {
                 dosage: '10mg',
                 frequency: 'Daily',
                 startDate: new Date(),
-                timeOfIntake: ['08:00']
+                timeOfIntake: ['08:00'],
+                prescribedBy: doctor._id
             },
             {
                 user: patient._id,
@@ -51,7 +69,8 @@ const seedData = async () => {
                 dosage: '500mg',
                 frequency: 'Twice Daily',
                 startDate: new Date(),
-                timeOfIntake: ['08:00', '20:00']
+                timeOfIntake: ['08:00', '20:00'],
+                prescribedBy: doctor._id
             }
         ]);
 
@@ -59,10 +78,12 @@ const seedData = async () => {
         await Appointment.create([
             {
                 user: patient._id,
+                doctor: doctor._id,
                 doctorName: 'Dr. Smith',
                 date: new Date(new Date().setDate(new Date().getDate() + 2)), // 2 days from now
                 location: 'City Hospital',
-                notes: 'Regular checkup'
+                notes: 'Regular checkup',
+                status: 'confirmed'
             }
         ]);
 
@@ -70,12 +91,19 @@ const seedData = async () => {
         await HealthLog.create([
             {
                 user: patient._id,
-                symptoms: 'Mild headache',
-                vitals: { bloodPressure: '120/80', heartRate: 72 }
+                mood: 'Happy',
+                notes: 'Feeling much better today.',
+                vitals: { bloodPressure: '120/80', heartRate: 72 },
+                date: new Date()
             }
         ]);
 
         console.log('Data Seeded Successfully');
+        console.log('------------------------');
+        console.log('Patient: patient@example.com / password123');
+        console.log('Doctor:  doctor@example.com / password123');
+        console.log('------------------------');
+        
         process.exit();
     } catch (error) {
         console.error('Error seeding data:', error);
