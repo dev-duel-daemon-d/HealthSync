@@ -26,13 +26,13 @@ function App() {
 
         {/* Protected Dashboard */}
         <Route path="/dashboard" element={<ProtectedRoute><RoleBasedDashboard /></ProtectedRoute>} />
-        <Route path="/wellness" element={<ProtectedRoute><Wellness /></ProtectedRoute>} />
-        <Route path="/education" element={<ProtectedRoute><Education /></ProtectedRoute>} />
+        <Route path="/wellness" element={<ProtectedRoute roles={['patient', 'caregiver']}><Wellness /></ProtectedRoute>} />
+        <Route path="/education" element={<ProtectedRoute roles={['patient', 'caregiver']}><Education /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         {/* Feature Specific Routes - Wrapped in Layout for consistency */}
         <Route path="/medications" element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={['patient', 'caregiver']}>
             <Layout>
               <div className="space-y-4">
                 <h1 className="text-2xl font-bold">Medication Management</h1>
@@ -43,7 +43,7 @@ function App() {
         } />
 
         <Route path="/appointments" element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={['patient', 'caregiver']}>
             <Layout>
               <div className="space-y-4">
                 <h1 className="text-2xl font-bold">Appointment Schedule</h1>

@@ -35,35 +35,43 @@ export default function Dashboard() {
 
             {/* Overview Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <OverviewCard icon={Pill} label="Medications" value="3 Active" color="blue" />
-                <OverviewCard icon={Calendar} label="Appointments" value="2 Upcoming" color="purple" />
-                <OverviewCard icon={Activity} label="Health Score" value="98%" color="green" />
+                {(user?.role === 'patient' || user?.role === 'caregiver') && (
+                    <>
+                        <OverviewCard icon={Pill} label="Medications" value="3 Active" color="blue" />
+                        <OverviewCard icon={Calendar} label="Appointments" value="2 Upcoming" color="purple" />
+                        <OverviewCard icon={Activity} label="Health Score" value="98%" color="green" />
+                    </>
+                )}
                 <CareTeamCard />
             </div>
 
             <div className="grid gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-8">
-                    <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600">
-                                <Pill className="h-5 w-5" />
-                            </div>
-                            Today's Schedule
-                        </h2>
-                        <MedicationList />
-                    </section>
+                    {(user?.role === 'patient' || user?.role === 'caregiver') && (
+                        <section className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600">
+                                    <Pill className="h-5 w-5" />
+                                </div>
+                                Today's Schedule
+                            </h2>
+                            <MedicationList />
+                        </section>
+                    )}
                 </div>
 
                 <div className="lg:col-span-1 space-y-8">
-                    <section className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900 text-green-600">
-                                <Activity className="h-5 w-5" />
-                            </div>
-                            Quick Vitals
-                        </h2>
-                        <HealthLogList />
-                    </section>
+                    {(user?.role === 'patient' || user?.role === 'caregiver') && (
+                        <section className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900 text-green-600">
+                                    <Activity className="h-5 w-5" />
+                                </div>
+                                Quick Vitals
+                            </h2>
+                            <HealthLogList />
+                        </section>
+                    )}
                 </div>
             </div>
         </Layout>
