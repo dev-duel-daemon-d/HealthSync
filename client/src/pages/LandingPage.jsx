@@ -282,13 +282,24 @@ export default function LandingPage() {
                             ))}
                         </div>
                         <div className="relative">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-6">
                                 {[1, 2, 3, 4].map((i) => (
                                     <div
                                         key={i}
-                                        className="aspect-square bg-gradient-to-br from-blue-400 to-purple-600 rounded-2xl hover:scale-105 hover:rotate-3 transition-all duration-500 cursor-pointer shadow-xl"
+                                        className="relative aspect-square hover:scale-105 hover:rotate-3 transition-all duration-500 cursor-pointer group"
                                         style={{ animationDelay: `${i * 0.1}s` }}
-                                    ></div>
+                                    >
+                                        {/* Gradient blur shadow */}
+                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500 scale-95"></div>
+                                        {/* Image container */}
+                                        <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-xl">
+                                            <img
+                                                src={`/img${i}.png`}
+                                                alt={`Healthcare feature ${i}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -319,16 +330,19 @@ export default function LandingPage() {
                                 name: "Sarah Johnson",
                                 role: "Patient",
                                 text: "The care I received was exceptional. The staff was professional and caring.",
+                                image: "/sarah.png",
                             },
                             {
                                 name: "Michael Chen",
                                 role: "Patient",
                                 text: "State-of-the-art facilities and amazing doctors. Highly recommend!",
+                                image: "/michael.png",
                             },
                             {
                                 name: "Emily Davis",
                                 role: "Patient",
                                 text: "They truly care about their patients. Best healthcare experience ever.",
+                                image: "/emily.png",
                             },
                         ].map((testimonial, idx) => (
                             <TestimonialCard
@@ -512,7 +526,7 @@ function FeatureItem({ icon: Icon, title, desc, delay }) {
     );
 }
 
-function TestimonialCard({ name, role, text, delay, visible }) {
+function TestimonialCard({ name, role, text, image, delay, visible }) {
     return (
         <div
             className={`bg-white dark:bg-gray-700 p-8 rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 ${visible ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
@@ -525,7 +539,13 @@ function TestimonialCard({ name, role, text, delay, visible }) {
             </div>
             <p className="text-gray-600 dark:text-gray-300 mb-6 italic">"{text}"</p>
             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600"></div>
+                <div className="w-12 h-12 rounded-full overflow-hidden shadow-md">
+                    <img
+                        src={image}
+                        alt={name}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
                 <div>
                     <div className="font-bold text-gray-900 dark:text-white">{name}</div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">{role}</div>
