@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ChatWindow from '@/components/ChatWindow';
+import CalendarSync from '@/components/CalendarSync';
 
 // Helper function to check if chat should be active
 const isChatActive = (appointmentDate) => {
@@ -355,6 +356,7 @@ function DoctorAppointmentsList() {
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Patient</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Location</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-center">Sync</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-center">Chat</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Action</th>
                                     </tr>
@@ -370,6 +372,14 @@ function DoctorAppointmentsList() {
                                             </td>
                                             <td className="p-4 align-middle font-semibold">{apt.user?.name}</td>
                                             <td className="p-4 align-middle">{apt.location}</td>
+                                            <td className="p-4 align-middle">
+                                                <CalendarSync 
+                                                    appointment={apt} 
+                                                    isDoctor={true} 
+                                                    showLabel={false} 
+                                                    className="mt-0 pt-0 border-0" 
+                                                />
+                                            </td>
                                             <td className="p-4 align-middle text-center">
                                                 <Dialog>
                                                     <DialogTrigger asChild>
