@@ -8,7 +8,7 @@ const Notification = require('../models/Notification');
 // @route   POST /api/patient/request-connection
 // @access  Private
 const sendConnectionRequest = async (req, res) => {
-    const { doctorId } = req.body;
+    const { doctorId, note } = req.body;
 
     try {
         // Check if already connected
@@ -30,7 +30,8 @@ const sendConnectionRequest = async (req, res) => {
 
         const request = await ConnectionRequest.create({
             doctor: doctorId,
-            patient: req.user._id
+            patient: req.user._id,
+            note
         });
 
         // Notify Doctor

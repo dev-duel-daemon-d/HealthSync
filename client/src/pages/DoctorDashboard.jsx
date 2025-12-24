@@ -216,17 +216,28 @@ function ConnectionRequestsList({ onUpdate }) {
                 ) : (
                     <div className="space-y-4">
                         {requests.map((req) => (
-                            <div key={req._id} className="flex items-center justify-between p-4 rounded-xl border bg-slate-50 dark:bg-slate-900">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                                        {req.patient?.name?.charAt(0)}
+                            <div key={req._id} className="flex flex-col p-4 rounded-xl border bg-slate-50 dark:bg-slate-900">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                            {req.patient?.name?.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold">{req.patient?.name}</p>
+                                            <p className="text-xs text-muted-foreground">{req.patient?.email}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-semibold">{req.patient?.name}</p>
-                                        <p className="text-xs text-muted-foreground">{req.patient?.email}</p>
+                                    <div className="text-xs text-muted-foreground">
+                                        {new Date(req.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
+                                {req.note && (
+                                    <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground italic relative">
+                                        <span className="absolute top-0 left-2 text-2xl leading-3 text-blue-200">"</span>
+                                        {req.note}
+                                    </div>
+                                )}
+                                <div className="flex gap-2 justify-end mt-3">
                                     <Button 
                                         size="sm" 
                                         className="bg-green-600 hover:bg-green-700"

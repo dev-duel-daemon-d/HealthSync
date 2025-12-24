@@ -15,6 +15,10 @@ const connectionRequestSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'accepted', 'rejected'],
         default: 'pending'
+    },
+    note: {
+        type: String,
+        maxLength: 500
     }
 }, { timestamps: true });
 

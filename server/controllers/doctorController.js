@@ -11,7 +11,7 @@ const crypto = require('crypto');
 // @access  Private (Patient/Caregiver)
 const getAllDoctors = async (req, res) => {
     try {
-        const doctors = await User.find({ role: 'doctor' }).select('name email specialization');
+        const doctors = await User.find({ role: 'doctor' }).select('name email specialization licenseNumber');
         res.json(doctors);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching doctors' });
