@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Search, UserPlus, CheckCircle, Clock, Stethoscope, MapPin } from 'lucid
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function DoctorDirectory() {
+    const { user } = useAuth();
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -51,12 +53,24 @@ export default function DoctorDirectory() {
     }, [searchTerm]);
 
     // Check status helper
-    const getRequest = (doctorId) => {
-        return myRequests.find(r => r.doctor._id === doctorId || r.doctor === doctorId);
+    const getDoctorState = (doctor) => {
+        // 1. Check if already connected (in user.doctors array)
+        // user.doctors might be array of IDs or Objects depending on population. 
+        // Safest is to check ID existence.
+        const isConnected = user?.doctors?.some(d => (d._id || d) === doctor._id);
+        if (isConnected) return { status: 'connected' };
+
+        // 2. Check if pending request exists
+        const request = myRequests.find(r => r.doctor._id === doctor._id || r.doctor === doctor._id);
+        if (request) return { status: request.status, request }; // 'pending', 'accepted', 'rejected'
+
+        return { status: 'none' };
     };
 
     const handleSuccess = () => {
         fetchMyRequests();
+        // Ideally we should also refresh 'user' to get updated doctors list if a request was auto-accepted,
+        // but since acceptance happens on doctor side, refreshing requests is enough for patient view.
     };
 
     return (
@@ -95,11 +109,12 @@ export default function DoctorDirectory() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {doctors.map(doctor => {
-                        const request = getRequest(doctor._id);
+                        const { status, request } = getDoctorState(doctor);
                         return (
                             <DoctorCard 
                                 key={doctor._id} 
                                 doctor={doctor} 
+                                status={status}
                                 request={request} 
                                 onRequestUpdate={handleSuccess}
                             />
@@ -111,7 +126,7 @@ export default function DoctorDirectory() {
     );
 }
 
-function DoctorCard({ doctor, request, onRequestUpdate }) {
+function DoctorCard({ doctor, status, request, onRequestUpdate }) {
     const [open, setOpen] = useState(false);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -146,8 +161,6 @@ function DoctorCard({ doctor, request, onRequestUpdate }) {
             setLoading(false);
         }
     };
-
-    const status = request?.status;
 
     return (
         <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-transparent hover:border-l-blue-500 overflow-hidden group">
@@ -192,7 +205,7 @@ function DoctorCard({ doctor, request, onRequestUpdate }) {
                             Cancel Request
                         </span>
                     </Button>
-                ) : status === 'accepted' ? (
+                ) : status === 'connected' || status === 'accepted' ? (
                     <Button disabled className="w-full bg-green-50 text-green-700 border border-green-200 hover:bg-green-50">
                         <CheckCircle className="mr-2 h-4 w-4" /> Connected
                     </Button>
