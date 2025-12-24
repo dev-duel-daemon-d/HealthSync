@@ -118,8 +118,9 @@ export default function DoctorDashboard() {
                 </div>
 
                 <Tabs defaultValue="patients" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">
+                    <TabsList className="grid w-full max-w-lg grid-cols-4 mb-8">
                         <TabsTrigger value="patients">My Patients</TabsTrigger>
+                        <TabsTrigger value="requests">Requests</TabsTrigger>
                         <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
                         <TabsTrigger value="appointments">Appointments</TabsTrigger>
                     </TabsList>
@@ -155,6 +156,10 @@ export default function DoctorDashboard() {
                         )}
                     </TabsContent>
 
+                    <TabsContent value="requests">
+                        <ConnectionRequestsList onUpdate={fetchPatients} />
+                    </TabsContent>
+
                     <TabsContent value="prescriptions">
                         <PrescriptionsList />
                     </TabsContent>
@@ -165,6 +170,85 @@ export default function DoctorDashboard() {
                 </Tabs>
             </div>
         </Layout>
+    );
+}
+
+function ConnectionRequestsList({ onUpdate }) {
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchRequests = async () => {
+        try {
+            const { data } = await api.get('/doctor/connection-requests');
+            setRequests(data);
+        } catch (error) {
+            console.error('Failed to fetch connection requests', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResponse = async (id, status) => {
+        try {
+            await api.put(`/doctor/connection-requests/${id}`, { status });
+            fetchRequests();
+            if (status === 'accepted') onUpdate();
+        } catch (error) {
+            console.error('Failed to respond to request', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchRequests();
+    }, []);
+
+    if (loading) return <div className="p-8 text-center">Loading requests...</div>;
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Connection Requests</CardTitle>
+                <CardDescription>Patients waiting to connect with you.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {requests.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No pending requests.</div>
+                ) : (
+                    <div className="space-y-4">
+                        {requests.map((req) => (
+                            <div key={req._id} className="flex items-center justify-between p-4 rounded-xl border bg-slate-50 dark:bg-slate-900">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                        {req.patient?.name?.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold">{req.patient?.name}</p>
+                                        <p className="text-xs text-muted-foreground">{req.patient?.email}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button 
+                                        size="sm" 
+                                        className="bg-green-600 hover:bg-green-700"
+                                        onClick={() => handleResponse(req._id, 'accepted')}
+                                    >
+                                        <Check className="h-4 w-4 mr-1" /> Accept
+                                    </Button>
+                                    <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="text-red-600 border-red-200 hover:bg-red-50"
+                                        onClick={() => handleResponse(req._id, 'rejected')}
+                                    >
+                                        <X className="h-4 w-4 mr-1" /> Reject
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
 }
 

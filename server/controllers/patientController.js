@@ -1,6 +1,51 @@
 const User = require('../models/User');
 const Medication = require('../models/Medication');
 const Appointment = require('../models/Appointment');
+const ConnectionRequest = require('../models/ConnectionRequest');
+const Notification = require('../models/Notification');
+
+// @desc    Send a connection request to a doctor
+// @route   POST /api/patient/request-connection
+// @access  Private
+const sendConnectionRequest = async (req, res) => {
+    const { doctorId } = req.body;
+
+    try {
+        // Check if already connected
+        const patient = await User.findById(req.user._id);
+        if (patient.doctors.includes(doctorId)) {
+            return res.status(400).json({ message: 'Already connected to this doctor' });
+        }
+
+        // Check if request already exists
+        const existingRequest = await ConnectionRequest.findOne({
+            doctor: doctorId,
+            patient: req.user._id,
+            status: 'pending'
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ message: 'Connection request already pending' });
+        }
+
+        const request = await ConnectionRequest.create({
+            doctor: doctorId,
+            patient: req.user._id
+        });
+
+        // Notify Doctor
+        await Notification.create({
+            user: doctorId,
+            type: 'connection',
+            message: `New connection request from patient: ${req.user.name}`,
+            relatedId: request._id
+        });
+
+        res.status(201).json({ message: 'Connection request sent successfully', request });
+    } catch (error) {
+        res.status(500).json({ message: 'Error sending connection request' });
+    }
+};
 
 // @desc    Get list of doctors for the current patient
 // @route   GET /api/patient/doctors
@@ -60,4 +105,4 @@ const removeDoctor = async (req, res) => {
     }
 };
 
-module.exports = { getMyDoctors, removeDoctor };
+module.exports = { getMyDoctors, removeDoctor, sendConnectionRequest };

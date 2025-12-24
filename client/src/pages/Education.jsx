@@ -1,10 +1,19 @@
+import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, ExternalLink, Heart, Shield, Stethoscope, Video } from 'lucide-react';
+import { BookOpen, ExternalLink, Heart, Shield, Stethoscope, Video, Loader2, UserPlus, CheckCircle2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import api from '@/services/api';
 
 export default function Education() {
+    const [doctors, setDoctors] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [requesting, setRequesting] = useState(null);
+    const [isOpen, setIsOpen] = useState(false);
+
     const resources = [
         {
             category: 'Conditions',
@@ -43,6 +52,36 @@ export default function Education() {
             readTime: '4 min read'
         }
     ];
+
+    const fetchDoctors = async () => {
+        setLoading(true);
+        try {
+            const { data } = await api.get('/doctor/all');
+            setDoctors(data);
+        } catch (error) {
+            console.error('Failed to load doctors', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConnect = async (doctorId) => {
+        setRequesting(doctorId);
+        try {
+            await api.post('/patient/request-connection', { doctorId });
+            alert('Connection request sent!');
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to send request');
+        } finally {
+            setRequesting(null);
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchDoctors();
+        }
+    }, [isOpen]);
 
     return (
         <Layout>
@@ -93,10 +132,63 @@ export default function Education() {
                         <h2 className="text-2xl font-bold mb-2">Need Professional Help?</h2>
                         <p className="text-blue-100">Connect with healthcare providers for personalized advice.</p>
                     </div>
-                    <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 border-none shadow-lg">
-                        <Stethoscope className="mr-2 h-5 w-5" />
-                        Find a Doctor
-                    </Button>
+                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 border-none shadow-lg">
+                                <Stethoscope className="mr-2 h-5 w-5" />
+                                Find a Doctor
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                                <DialogTitle>Available Doctors</DialogTitle>
+                                <DialogDescription>
+                                    Browse our network of healthcare professionals and send a connection request.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-[400px] mt-4 pr-4">
+                                {loading ? (
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                    </div>
+                                ) : doctors.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {doctors.map((doctor) => (
+                                            <div key={doctor._id} className="flex items-center justify-between p-4 rounded-xl border bg-slate-50 dark:bg-slate-900 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                                        {doctor.name.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-sm">Dr. {doctor.name}</p>
+                                                        <p className="text-xs text-muted-foreground capitalize">{doctor.specialization || 'General Physician'}</p>
+                                                    </div>
+                                                </div>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline"
+                                                    onClick={() => handleConnect(doctor._id)}
+                                                    disabled={requesting === doctor._id}
+                                                    className="gap-2"
+                                                >
+                                                    {requesting === doctor._id ? (
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                        <UserPlus className="h-3 w-3" />
+                                                    )}
+                                                    Connect
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        No doctors available at the moment.
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
                 </div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
             </div>

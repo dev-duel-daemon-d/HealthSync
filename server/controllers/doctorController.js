@@ -3,7 +3,77 @@ const Medication = require('../models/Medication');
 const HealthLog = require('../models/HealthLog');
 const Notification = require('../models/Notification');
 const Appointment = require('../models/Appointment');
+const ConnectionRequest = require('../models/ConnectionRequest');
 const crypto = require('crypto');
+
+// @desc    Get all doctors in the system
+// @route   GET /api/doctor/all
+// @access  Private (Patient/Caregiver)
+const getAllDoctors = async (req, res) => {
+    try {
+        const doctors = await User.find({ role: 'doctor' }).select('name email specialization');
+        res.json(doctors);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching doctors' });
+    }
+};
+
+// @desc    Get pending connection requests for a doctor
+// @route   GET /api/doctor/connection-requests
+// @access  Private (Doctor only)
+const getConnectionRequests = async (req, res) => {
+    try {
+        const requests = await ConnectionRequest.find({ 
+            doctor: req.user._id, 
+            status: 'pending' 
+        }).populate('patient', 'name email');
+        res.json(requests);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching requests' });
+    }
+};
+
+// @desc    Respond to a connection request
+// @route   PUT /api/doctor/connection-requests/:id
+// @access  Private (Doctor only)
+const respondToConnectionRequest = async (req, res) => {
+    const { status } = req.body; // 'accepted' or 'rejected'
+    
+    try {
+        const request = await ConnectionRequest.findById(req.params.id);
+        if (!request) return res.status(404).json({ message: 'Request not found' });
+        
+        if (request.doctor.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        request.status = status;
+        await request.save();
+
+        if (status === 'accepted') {
+            // Update Doctor's patient list
+            await User.findByIdAndUpdate(request.doctor, {
+                $addToSet: { patients: request.patient }
+            });
+            // Update Patient's doctor list
+            await User.findByIdAndUpdate(request.patient, {
+                $addToSet: { doctors: request.doctor }
+            });
+
+            // Notify Patient
+            await Notification.create({
+                user: request.patient,
+                type: 'connection',
+                message: `Dr. ${req.user.name} has accepted your connection request.`,
+                relatedId: request.doctor
+            });
+        }
+
+        res.json({ message: `Request ${status} successfully`, request });
+    } catch (error) {
+        res.status(500).json({ message: 'Error responding to request' });
+    }
+};
 
 // @desc    Generate a unique connection code for the doctor
 // @route   POST /api/doctor/generate-code
@@ -308,6 +378,9 @@ const updateAppointmentStatus = async (req, res) => {
 };
 
 module.exports = {
+    getAllDoctors,
+    getConnectionRequests,
+    respondToConnectionRequest,
     generateConnectionCode,
     getMyPatients,
     getPatientLogs,

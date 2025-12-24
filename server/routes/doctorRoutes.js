@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { protect, doctorOnly } = require('../middleware/authMiddleware');
 const {
+    getAllDoctors,
+    getConnectionRequests,
+    respondToConnectionRequest,
     generateConnectionCode,
     getMyPatients,
     getPatientLogs,
@@ -14,10 +17,13 @@ const {
     updateAppointmentStatus
 } = require('../controllers/doctorController');
 
-// Patient Routes
+// Shared/Patient Routes
+router.get('/all', protect, getAllDoctors);
 router.post('/connect', protect, connectWithDoctor);
 
 // Doctor Routes
+router.get('/connection-requests', protect, doctorOnly, getConnectionRequests);
+router.put('/connection-requests/:id', protect, doctorOnly, respondToConnectionRequest);
 router.post('/generate-code', protect, doctorOnly, generateConnectionCode);
 router.get('/patients', protect, doctorOnly, getMyPatients);
 router.get('/patient/:patientId/logs', protect, doctorOnly, getPatientLogs);
