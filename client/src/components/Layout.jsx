@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Pill, Calendar, Activity, BookOpen, LogOut, Heart, Bell } from 'lucide-react';
+import { LayoutDashboard, Pill, Calendar, Activity, BookOpen, LogOut, Heart, Bell, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
 
@@ -15,6 +15,7 @@ export default function Layout({ children }) {
         { label: 'Appointments', path: '/appointments', icon: Calendar },
         { label: 'Wellness', path: '/wellness', icon: Activity },
         { label: 'Education', path: '/education', icon: BookOpen },
+        { label: 'Settings', path: '/profile', icon: Settings },
     ];
 
     return (
@@ -67,17 +68,19 @@ export default function Layout({ children }) {
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account</p>
                         <NotificationBell />
                     </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/5 to-purple-500/5 border border-blue-100 dark:border-blue-900/30 mb-4">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-sm">
-                                {user?.name?.charAt(0) || 'U'}
-                            </div>
-                            <div>
-                                <p className="text-sm font-semibold truncate max-w-[120px]">{user?.name}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                    <Link to="/profile">
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/5 to-purple-500/5 border border-blue-100 dark:border-blue-900/30 mb-4 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-sm">
+                                    {user?.name?.charAt(0) || 'U'}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold truncate max-w-[120px]">{user?.name}</p>
+                                    <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </Link>
                     <Button
                         variant="ghost"
                         size="sm"

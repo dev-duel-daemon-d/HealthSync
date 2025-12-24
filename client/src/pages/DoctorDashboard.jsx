@@ -30,6 +30,32 @@ export default function DoctorDashboard() {
     const [connectionCode, setConnectionCode] = useState(user?.connectionCode || null);
     const [loading, setLoading] = useState(true);
 
+    const fetchPatients = async () => {
+        try {
+            const { data } = await api.get('/doctor/patients');
+            setPatients(data);
+        } catch (error) {
+            console.error('Failed to fetch patients', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const generateCode = async () => {
+        try {
+            const { data } = await api.post('/doctor/generate-code');
+            setConnectionCode(data.connectionCode);
+        } catch (error) {
+            console.error('Failed to generate code', error);
+        }
+    };
+
+    useEffect(() => {
+        if (user?.status !== 'pending') {
+            fetchPatients();
+        }
+    }, [user?.status]);
+
     // Verification Pending View
     if (user?.status === 'pending') {
         return (
@@ -60,30 +86,6 @@ export default function DoctorDashboard() {
             </Layout>
         );
     }
-
-    const fetchPatients = async () => {
-        try {
-            const { data } = await api.get('/doctor/patients');
-            setPatients(data);
-        } catch (error) {
-            console.error('Failed to fetch patients', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const generateCode = async () => {
-        try {
-            const { data } = await api.post('/doctor/generate-code');
-            setConnectionCode(data.connectionCode);
-        } catch (error) {
-            console.error('Failed to generate code', error);
-        }
-    };
-
-    useEffect(() => {
-        fetchPatients();
-    }, []);
 
     return (
         <Layout>

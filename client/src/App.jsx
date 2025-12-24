@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
 import Wellness from './pages/Wellness';
 import Education from './pages/Education';
+import Profile from './pages/Profile';
 import { MedicationList } from './components/MedicationList';
 import { AppointmentList } from './components/AppointmentList';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -27,6 +28,7 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><RoleBasedDashboard /></ProtectedRoute>} />
         <Route path="/wellness" element={<ProtectedRoute><Wellness /></ProtectedRoute>} />
         <Route path="/education" element={<ProtectedRoute><Education /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         {/* Feature Specific Routes - Wrapped in Layout for consistency */}
         <Route path="/medications" element={

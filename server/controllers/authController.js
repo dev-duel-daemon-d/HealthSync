@@ -121,6 +121,44 @@ const getMe = async (req, res) => {
     res.status(200).json(user);
 };
 
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateProfile = async (req, res) => {
+    const user = await User.findById(req.user.id);
+
+    if (user) {
+        user.name = req.body.name || user.name;
+        // user.email = req.body.email || user.email; // Keep email immutable for now or require re-verification
+        
+        if (req.body.password) {
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(req.body.password, salt);
+        }
+
+        // Role specific fields
+        if (user.role === 'doctor') {
+            user.specialization = req.body.specialization || user.specialization;
+            user.licenseNumber = req.body.licenseNumber || user.licenseNumber;
+        }
+
+        const updatedUser = await user.save();
+
+        res.json({
+            _id: updatedUser.id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            status: updatedUser.status,
+            specialization: updatedUser.specialization,
+            licenseNumber: updatedUser.licenseNumber,
+            token: generateAccessToken(updatedUser._id)
+        });
+    } else {
+        res.status(404).json({ message: 'User not found' });
+    }
+};
+
 // @desc    Refresh access token
 // @route   POST /api/auth/refresh
 // @access  Public (with cookie)
