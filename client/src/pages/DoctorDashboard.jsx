@@ -118,8 +118,9 @@ export default function DoctorDashboard() {
                 </div>
 
                 <Tabs defaultValue="patients" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">
+                    <TabsList className="grid w-full max-w-xl grid-cols-4 mb-8">
                         <TabsTrigger value="patients">My Patients</TabsTrigger>
+                        <TabsTrigger value="requests">Requests</TabsTrigger>
                         <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
                         <TabsTrigger value="appointments">Appointments</TabsTrigger>
                     </TabsList>
@@ -155,6 +156,10 @@ export default function DoctorDashboard() {
                         )}
                     </TabsContent>
 
+                    <TabsContent value="requests">
+                        <RequestsList onUpdate={fetchPatients} />
+                    </TabsContent>
+
                     <TabsContent value="prescriptions">
                         <PrescriptionsList />
                     </TabsContent>
@@ -165,6 +170,91 @@ export default function DoctorDashboard() {
                 </Tabs>
             </div>
         </Layout>
+    );
+}
+
+function RequestsList({ onUpdate }) {
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchRequests = async () => {
+        try {
+            const { data } = await api.get('/doctor/requests');
+            setRequests(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRequests();
+    }, []);
+
+    const handleAction = async (id, status) => {
+        try {
+            await api.put(`/doctor/requests/${id}`, { status });
+            if (status === 'accepted') {
+                onUpdate(); // Refresh patient list
+            }
+            fetchRequests(); // Refresh request list
+        } catch (error) {
+            console.error(error);
+            alert('Action failed');
+        }
+    };
+
+    if (loading) return <div>Loading requests...</div>;
+
+    if (requests.length === 0) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Connection Requests</CardTitle>
+                    <CardDescription>No pending requests at the moment.</CardDescription>
+                </CardHeader>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Pending Connection Requests</CardTitle>
+                <CardDescription>Patients requesting to share their health data with you.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {requests.map((req) => (
+                        <div key={req._id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold">
+                                    {req.patient?.name?.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="font-semibold">{req.patient?.name}</p>
+                                    <p className="text-sm text-muted-foreground">{req.patient?.email}</p>
+                                    {req.message && (
+                                        <div className="mt-2 p-2 bg-muted rounded-md text-xs italic border-l-2 border-blue-500">
+                                            "{req.message}"
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleAction(req._id, 'accepted')}>
+                                    <Check className="h-4 w-4 mr-2" /> Accept
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleAction(req._id, 'rejected')}>
+                                    <X className="h-4 w-4 mr-2" /> Reject
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 

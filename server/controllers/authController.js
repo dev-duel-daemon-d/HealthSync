@@ -197,6 +197,7 @@ module.exports = {
     registerUser,
     loginUser,
     getMe,
+    updateProfile,
     refresh,
     logout
 };

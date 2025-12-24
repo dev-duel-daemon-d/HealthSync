@@ -1,124 +1,114 @@
+import { useState } from 'react';
 import Layout from '@/components/Layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookOpen, Search, Stethoscope, Video, FileText, ExternalLink, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { BookOpen, ExternalLink, Heart, Shield, Stethoscope, Video } from 'lucide-react';
+import DoctorDirectory from '@/components/DoctorDirectory';
 
 export default function Education() {
-    const resources = [
+    const [activeTab, setActiveTab] = useState('articles');
+
+    const articles = [
         {
-            category: 'Conditions',
-            title: 'Understanding Hypertension',
-            description: 'A comprehensive guide to managing high blood pressure through diet and exercise.',
-            icon: Heart,
-            color: 'text-red-500',
-            bg: 'bg-red-100',
-            readTime: '5 min read'
+            id: 1,
+            title: "Understanding Hypertension",
+            category: "Heart Health",
+            readTime: "5 min read",
+            image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=2070",
+            summary: "Hypertension, or high blood pressure, is a common condition that affects the body's arteries. Learn about symptoms and prevention."
         },
         {
-            category: 'Medication',
-            title: 'Medication Adherence Tips',
-            description: 'Why taking your medication on time matters and how to build a routine.',
-            icon: Shield,
-            color: 'text-blue-500',
-            bg: 'bg-blue-100',
-            readTime: '3 min read'
+            id: 2,
+            title: "Diabetes Management Tips",
+            category: "Chronic Care",
+            readTime: "7 min read",
+            image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=2080",
+            summary: "Effective strategies for managing blood sugar levels through diet, exercise, and medication adherence."
         },
         {
-            category: 'Lifestyle',
-            title: 'Sleep Hygiene Basics',
-            description: 'Simple habits that can dramatically improve your sleep quality.',
-            icon: MoonIcon,
-            color: 'text-indigo-500',
-            bg: 'bg-indigo-100',
-            readTime: '7 min read'
+            id: 3,
+            title: "The Importance of Sleep",
+            category: "Wellness",
+            readTime: "4 min read",
+            image: "https://images.unsplash.com/photo-1541781777621-af13943727dd?auto=format&fit=crop&q=80&w=2070",
+            summary: "Good sleep improves your brain performance, mood, and health. Discover how to improve your sleep hygiene."
         },
         {
-            category: 'Telehealth',
-            title: 'Preparing for Teleconsultations',
-            description: 'How to get the most out of your virtual doctor appointments.',
-            icon: Video,
-            color: 'text-purple-500',
-            bg: 'bg-purple-100',
-            readTime: '4 min read'
+            id: 4,
+            title: "Mental Health Basics",
+            category: "Mental Health",
+            readTime: "6 min read",
+            image: "https://images.unsplash.com/photo-1493836512294-502baa1986e2?auto=format&fit=crop&q=80&w=2090",
+            summary: "Recognizing the signs of anxiety and depression, and knowing when to seek professional help."
         }
     ];
 
     return (
         <Layout>
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Health Education</h1>
-                <p className="text-muted-foreground">Certified resources to help you manage your health better.</p>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-                {resources.map((item, index) => {
-                    const Icon = item.icon;
-                    return (
-                        <Card key={index} className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-none shadow-md">
-                            <div className={`h-2 w-full ${item.bg.replace('bg-', 'bg-gradient-to-r from-')}-400 to-${item.bg.replace('bg-', '')}-600`}></div>
-                            <CardHeader>
-                                <div className="flex justify-between items-start mb-2">
-                                    <Badge variant="outline" className={`${item.bg} ${item.color} border-none`}>
-                                        {item.category}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <BookOpen className="h-3 w-3" /> {item.readTime}
-                                    </span>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className={`p-3 rounded-xl ${item.bg} ${item.color} h-fit group-hover:scale-110 transition-transform`}>
-                                        <Icon className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-xl mb-2 group-hover:text-blue-600 transition-colors">{item.title}</CardTitle>
-                                        <CardDescription>{item.description}</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardFooter className="pt-0">
-                                <Button variant="ghost" className="w-full justify-between hover:bg-slate-50 dark:hover:bg-slate-900 group/btn">
-                                    Read Article
-                                    <ExternalLink className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    );
-                })}
-            </div>
-
-            <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white relative overflow-hidden">
-                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div>
-                        <h2 className="text-2xl font-bold mb-2">Need Professional Help?</h2>
-                        <p className="text-blue-100">Connect with healthcare providers for personalized advice.</p>
-                    </div>
-                    <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 border-none shadow-lg">
-                        <Stethoscope className="mr-2 h-5 w-5" />
-                        Find a Doctor
-                    </Button>
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Health Resources</h1>
+                    <p className="text-muted-foreground">Trusted medical information and specialist directory.</p>
                 </div>
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                        <TabsTrigger value="articles" className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4" />
+                            Articles & Guides
+                        </TabsTrigger>
+                        <TabsTrigger value="doctors" className="flex items-center gap-2">
+                            <Stethoscope className="h-4 w-4" />
+                            Find Specialists
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="articles" className="animate-fade-in">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {articles.map((article) => (
+                                <Card key={article.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer">
+                                    <div className="h-48 overflow-hidden relative">
+                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors z-10" />
+                                        <img 
+                                            src={article.image} 
+                                            alt={article.title} 
+                                            className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                        <Badge className="absolute top-4 left-4 z-20 bg-white/90 text-black hover:bg-white">
+                                            {article.category}
+                                        </Badge>
+                                    </div>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <Clock className="h-3 w-3" /> {article.readTime}
+                                            </span>
+                                        </div>
+                                        <CardTitle className="text-xl group-hover:text-blue-600 transition-colors">
+                                            {article.title}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-muted-foreground text-sm line-clamp-2">
+                                            {article.summary}
+                                        </p>
+                                        <Button variant="link" className="px-0 mt-4 text-blue-600">
+                                            Read Article <ExternalLink className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="doctors" className="animate-fade-in">
+                        <DoctorDirectory />
+                    </TabsContent>
+                </Tabs>
             </div>
         </Layout>
     );
-}
-
-function MoonIcon(props) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-        </svg>
-    )
 }

@@ -1,33 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const { protect, doctorOnly } = require('../middleware/authMiddleware');
-const {
-    generateConnectionCode,
-    getMyPatients,
-    getPatientLogs,
+const { 
+    getDoctorPatients, 
+    generateConnectionCode, 
+    getPatientLogsForDoctor, 
+    getDoctorAppointments, 
+    updateAppointmentStatus,
     prescribeMedication,
-    connectWithDoctor,
-    getMyPrescriptions,
-    updatePrescription,
+    getDoctorPrescriptions,
     deletePrescription,
-    getDoctorAppointments,
-    updateAppointmentStatus
+    updatePrescription,
+    getConnectionRequests,
+    handleConnectionRequest
 } = require('../controllers/doctorController');
+const { protect } = require('../middleware/authMiddleware');
 
-// Patient Routes
-router.post('/connect', protect, connectWithDoctor);
+router.get('/patients', protect, getDoctorPatients);
+router.post('/generate-code', protect, generateConnectionCode);
+router.get('/patient/:id/logs', protect, getPatientLogsForDoctor);
+router.get('/appointments', protect, getDoctorAppointments);
+router.patch('/appointments/:id/status', protect, updateAppointmentStatus);
+router.post('/prescribe', protect, prescribeMedication);
+router.get('/prescriptions', protect, getDoctorPrescriptions);
+router.delete('/prescriptions/:id', protect, deletePrescription);
+router.put('/prescriptions/:id', protect, updatePrescription);
 
-// Doctor Routes
-router.post('/generate-code', protect, doctorOnly, generateConnectionCode);
-router.get('/patients', protect, doctorOnly, getMyPatients);
-router.get('/patient/:patientId/logs', protect, doctorOnly, getPatientLogs);
-router.post('/prescribe', protect, doctorOnly, prescribeMedication);
-router.get('/prescriptions', protect, doctorOnly, getMyPrescriptions);
-router.put('/prescriptions/:id', protect, doctorOnly, updatePrescription);
-router.delete('/prescriptions/:id', protect, doctorOnly, deletePrescription);
-
-// Doctor Appointment Routes
-router.get('/appointments', protect, doctorOnly, getDoctorAppointments);
-router.patch('/appointments/:id/status', protect, doctorOnly, updateAppointmentStatus);
+// New Routes
+router.get('/requests', protect, getConnectionRequests);
+router.put('/requests/:id', protect, handleConnectionRequest);
 
 module.exports = router;

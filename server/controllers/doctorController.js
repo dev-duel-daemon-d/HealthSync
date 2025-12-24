@@ -1,292 +1,82 @@
 const User = require('../models/User');
-const Medication = require('../models/Medication');
-const HealthLog = require('../models/HealthLog');
-const Notification = require('../models/Notification');
 const Appointment = require('../models/Appointment');
-const crypto = require('crypto');
+const HealthLog = require('../models/HealthLog');
+const Medication = require('../models/Medication');
+const ConnectionRequest = require('../models/ConnectionRequest');
+const Notification = require('../models/Notification');
 
-// @desc    Generate a unique connection code for the doctor
-// @route   POST /api/doctor/generate-code
-// @access  Private (Doctor only)
-const generateConnectionCode = async (req, res) => {
-    try {
-        // Generate a simple 6-character code (e.g., 'DOC-A1B2')
-        const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
-        const code = `DOC-${randomPart}`;
-
-        const updatedUser = await User.findByIdAndUpdate(
-            req.user._id,
-            { connectionCode: code },
-            { new: true }
-        );
-
-        res.json({ connectionCode: updatedUser.connectionCode });
-    } catch (error) {
-        res.status(500).json({ message: 'Error generating code' });
-    }
-};
-
-// @desc    Get list of patients linked to this doctor
+// @desc    Get all patients for doctor
 // @route   GET /api/doctor/patients
-// @access  Private (Doctor only)
-const getMyPatients = async (req, res) => {
+// @access  Private (Doctor)
+const getDoctorPatients = async (req, res) => {
     try {
-        const doctor = await User.findById(req.user._id).populate('patients', 'name email createdAt');
-        res.json(doctor.patients);
+        const doctor = await User.findById(req.user.id).populate('patients', 'name email');
+        res.status(200).json(doctor.patients);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching patients' });
+        res.status(500).json({ message: 'Server Error' });
     }
 };
 
-// @desc    Get specific patient's health logs
-// @route   GET /api/doctor/patient/:patientId/logs
-// @access  Private (Doctor only)
-const getPatientLogs = async (req, res) => {
+// @desc    Generate Connection Code
+// @route   POST /api/doctor/generate-code
+// @access  Private (Doctor)
+const generateConnectionCode = async (req, res) => {
+    // Simple 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    
     try {
-        const { patientId } = req.params;
-
-        // Verify this patient is linked to this doctor
-        const isLinked = req.user.patients.includes(patientId);
-        if (!isLinked) {
-            return res.status(403).json({ message: 'Not authorized to view this patient' });
-        }
-
-        const logs = await HealthLog.find({ user: patientId }).sort({ date: -1 });
-        res.json(logs);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching logs' });
-    }
-};
-
-// @desc    Prescribe medication (Single or Batch)
-// @route   POST /api/doctor/prescribe
-// @access  Private (Doctor only)
-const prescribeMedication = async (req, res) => {
-    try {
-        const { patientId, medications, name, dosage, frequency, startDate, notes } = req.body;
-
-        // Verify linkage
-        if (!req.user.patients.includes(patientId)) {
-            return res.status(403).json({ message: 'Not authorized to treat this patient' });
-        }
-
-        let createdMeds = [];
-
-        // Handle Batch
-        if (medications && Array.isArray(medications)) {
-            const medsToCreate = medications.map(med => ({
-                user: patientId,
-                name: med.name,
-                dosage: med.dosage,
-                frequency: med.frequency,
-                startDate: med.startDate || new Date(),
-                notes: notes, // Apply general notes to all
-                prescribedBy: req.user._id,
-                status: 'active'
-            }));
-            createdMeds = await Medication.insertMany(medsToCreate);
-        } 
-        // Handle Single (Legacy support)
-        else if (name && dosage && frequency) {
-            const med = await Medication.create({
-                user: patientId,
-                name,
-                dosage,
-                frequency,
-                startDate: startDate || new Date(),
-                notes,
-                prescribedBy: req.user._id,
-                status: 'active'
-            });
-            createdMeds = [med];
-        } else {
-            return res.status(400).json({ message: 'Please provide medication details' });
-        }
-
-        // Create Notification
-        const medNames = createdMeds.map(m => m.name).join(', ');
-        await Notification.create({
-            user: patientId,
-            type: 'prescription',
-            message: `Dr. ${req.user.name} prescribed new medication(s): ${medNames}`,
-            relatedId: createdMeds[0]._id // Link to the first one
-        });
-
-        res.status(201).json(createdMeds);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error creating prescription' });
-    }
-};
-
-// @desc    Connect a patient to a doctor using a code
-// @route   POST /api/doctor/connect
-// @access  Private (Patient)
-const connectWithDoctor = async (req, res) => {
-    const { connectionCode } = req.body;
-
-    if (!connectionCode) {
-        return res.status(400).json({ message: 'Connection code required' });
-    }
-
-    try {
-        // Find doctor by code
-        const doctor = await User.findOne({ connectionCode, role: 'doctor' });
-
-        if (!doctor) {
-            return res.status(404).json({ message: 'Invalid connection code' });
-        }
-
-        // Check if already connected
-        if (doctor.patients.includes(req.user._id)) {
-            return res.status(400).json({ message: 'Already connected to this doctor' });
-        }
-
-        // Update both Doctor and Patient
-        doctor.patients.push(req.user._id);
+        const doctor = await User.findById(req.user.id);
+        doctor.connectionCode = code;
         await doctor.save();
-
-        const patient = await User.findById(req.user._id);
-        patient.doctors.push(doctor._id);
-        await patient.save();
-
-        // CREATE NOTIFICATION FOR DOCTOR
-        await Notification.create({
-            user: doctor._id,
-            type: 'connection',
-            message: `New patient connected: ${patient.name}`,
-            relatedId: patient._id
-        });
-
-        res.json({ message: `Successfully connected with Dr. ${doctor.name}` });
+        res.status(200).json({ connectionCode: code });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error connecting to doctor' });
+        res.status(500).json({ message: 'Server Error' });
     }
 };
 
-// @desc    Get all prescriptions made by this doctor
-// @route   GET /api/doctor/prescriptions
-// @access  Private (Doctor only)
-const getMyPrescriptions = async (req, res) => {
+// @desc    Get Patient Logs
+// @route   GET /api/doctor/patient/:id/logs
+// @access  Private (Doctor)
+const getPatientLogsForDoctor = async (req, res) => {
     try {
-        const prescriptions = await Medication.find({ prescribedBy: req.user._id })
-            .populate('user', 'name email')
-            .sort({ createdAt: -1 });
-        res.json(prescriptions);
+        // Verify patient belongs to doctor
+        const doctor = await User.findById(req.user.id);
+        if (!doctor.patients.includes(req.params.id)) {
+             return res.status(403).json({ message: 'Not authorized to view this patient' });
+        }
+
+        const logs = await HealthLog.find({ user: req.params.id }).sort({ date: -1 });
+        res.status(200).json(logs);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching prescriptions' });
+        res.status(500).json({ message: 'Server Error' });
     }
 };
 
-// @desc    Update a prescription (including End Time)
-// @route   PUT /api/doctor/prescriptions/:id
-// @access  Private (Doctor only)
-const updatePrescription = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, dosage, frequency, startDate, endDate, status } = req.body;
-
-        const medication = await Medication.findById(id);
-
-        if (!medication) {
-            return res.status(404).json({ message: 'Medication not found' });
-        }
-
-        // Verify this doctor prescribed it
-        if (medication.prescribedBy.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Not authorized to edit this prescription' });
-        }
-
-        medication.name = name || medication.name;
-        medication.dosage = dosage || medication.dosage;
-        medication.frequency = frequency || medication.frequency;
-        medication.startDate = startDate || medication.startDate;
-        medication.endDate = endDate; // Allow setting or clearing (if null sent)
-        medication.status = status || medication.status;
-
-        await medication.save();
-
-        // Notify patient of update
-        await Notification.create({
-            user: medication.user,
-            type: 'prescription',
-            message: `Dr. ${req.user.name} updated your prescription for ${medication.name}`,
-            relatedId: medication._id
-        });
-
-        res.json(medication);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error updating prescription' });
-    }
-};
-
-// @desc    Delete a prescription
-// @route   DELETE /api/doctor/prescriptions/:id
-// @access  Private (Doctor only)
-const deletePrescription = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const medication = await Medication.findById(id);
-
-        if (!medication) {
-            return res.status(404).json({ message: 'Medication not found' });
-        }
-
-        // Verify authority
-        if (medication.prescribedBy.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Not authorized to delete this prescription' });
-        }
-
-        // Notify patient before deletion (since we need the med details)
-        await Notification.create({
-            user: medication.user,
-            type: 'prescription',
-            message: `Dr. ${req.user.name} cancelled/removed your prescription for ${medication.name}`,
-            relatedId: null // ID is gone
-        });
-
-        await medication.deleteOne();
-
-        res.json({ message: 'Prescription removed' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error deleting prescription' });
-    }
-};
-
-// @desc    Get appointments for this doctor
+// @desc    Get Doctor Appointments
 // @route   GET /api/doctor/appointments
-// @access  Private (Doctor only)
+// @access  Private (Doctor)
 const getDoctorAppointments = async (req, res) => {
     try {
-        console.log('--- GET DOCTOR APPOINTMENTS DEBUG ---');
-        console.log('Doctor ID (req.user._id):', req.user._id);
-
-        const appointments = await Appointment.find({ doctor: req.user._id })
-            .populate('user', 'name email')
+        const appointments = await Appointment.find({ doctor: req.user.id })
+            .populate('user', 'name')
             .sort({ date: 1 });
-
-        console.log('Found Count:', appointments.length);
-        console.log('-----------------------------------');
-        res.json(appointments);
+        res.status(200).json(appointments);
     } catch (error) {
-        console.error('Error fetching appointments:', error);
-        res.status(500).json({ message: 'Error fetching appointments' });
+        res.status(500).json({ message: 'Server Error' });
     }
 };
 
-// @desc    Update appointment status (Confirm/Cancel)
+// @desc    Update Appointment Status
 // @route   PATCH /api/doctor/appointments/:id/status
-// @access  Private (Doctor only)
+// @access  Private (Doctor)
 const updateAppointmentStatus = async (req, res) => {
+    const { status } = req.body;
     try {
-        const { status } = req.body; // 'confirmed', 'cancelled'
         const appointment = await Appointment.findById(req.params.id);
-
         if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
-        if (appointment.doctor.toString() !== req.user._id.toString()) {
+        
+        // Check ownership
+        if (appointment.doctor.toString() !== req.user.id) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
@@ -301,21 +91,188 @@ const updateAppointmentStatus = async (req, res) => {
             relatedId: appointment._id
         });
 
-        res.json(appointment);
+        res.status(200).json(appointment);
     } catch (error) {
-        res.status(500).json({ message: 'Error updating appointment' });
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Prescribe Medication
+// @route   POST /api/doctor/prescribe
+// @access  Private (Doctor)
+const prescribeMedication = async (req, res) => {
+    const { patientId, medications, notes } = req.body; // medications is array
+    
+    try {
+        // Verify patient
+        const doctor = await User.findById(req.user.id);
+        if (!doctor.patients.includes(patientId)) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const createdMeds = [];
+        for (const med of medications) {
+             const newMed = await Medication.create({
+                 user: patientId,
+                 name: med.name,
+                 dosage: med.dosage,
+                 frequency: med.frequency,
+                 startDate: med.startDate,
+                 prescribedBy: req.user.id,
+                 instructions: notes
+             });
+             createdMeds.push(newMed);
+        }
+
+        // Notify patient
+        await Notification.create({
+            user: patientId,
+            type: 'prescription',
+            message: `Dr. ${req.user.name} prescribed new medication(s).`,
+            relatedId: createdMeds[0]._id
+        });
+
+        res.status(201).json(createdMeds);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Get Prescriptions by Doctor
+// @route   GET /api/doctor/prescriptions
+// @access  Private (Doctor)
+const getDoctorPrescriptions = async (req, res) => {
+    try {
+        const prescriptions = await Medication.find({ prescribedBy: req.user.id })
+            .populate('user', 'name');
+        res.status(200).json(prescriptions);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Delete Prescription
+// @route   DELETE /api/doctor/prescriptions/:id
+// @access  Private (Doctor)
+const deletePrescription = async (req, res) => {
+    try {
+        const med = await Medication.findById(req.params.id);
+        if (!med) return res.status(404).json({ message: 'Not found' });
+        
+        if (med.prescribedBy.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        await Medication.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: 'Deleted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Update Prescription
+// @route   PUT /api/doctor/prescriptions/:id
+// @access  Private (Doctor)
+const updatePrescription = async (req, res) => {
+    try {
+        const med = await Medication.findById(req.params.id);
+        if (!med) return res.status(404).json({ message: 'Not found' });
+        
+        if (med.prescribedBy.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const updatedMed = await Medication.findByIdAndUpdate(
+            req.params.id, 
+            req.body, 
+            { new: true }
+        ).populate('user', 'name');
+
+        res.status(200).json(updatedMed);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Get incoming connection requests
+// @route   GET /api/doctor/requests
+// @access  Private (Doctor)
+const getConnectionRequests = async (req, res) => {
+    try {
+        const requests = await ConnectionRequest.find({ 
+            doctor: req.user.id,
+            status: 'pending'
+        }).populate('patient', 'name email');
+        res.status(200).json(requests);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Handle connection request (accept/reject)
+// @route   PUT /api/doctor/requests/:id
+// @access  Private (Doctor)
+const handleConnectionRequest = async (req, res) => {
+    const { status } = req.body; // 'accepted' or 'rejected'
+    const requestId = req.params.id;
+
+    if (!['accepted', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    try {
+        const request = await ConnectionRequest.findById(requestId);
+        if (!request) return res.status(404).json({ message: 'Request not found' });
+
+        if (request.doctor.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        if (request.status !== 'pending') {
+            return res.status(400).json({ message: 'Request already handled' });
+        }
+
+        request.status = status;
+        await request.save();
+
+        if (status === 'accepted') {
+            // Update Doctor's patient list
+            await User.findByIdAndUpdate(req.user.id, {
+                $addToSet: { patients: request.patient }
+            });
+
+            // Update Patient's doctor list
+            await User.findByIdAndUpdate(request.patient, {
+                $addToSet: { doctors: req.user.id }
+            });
+
+            // Notify patient
+            await Notification.create({
+                user: request.patient,
+                type: 'connection',
+                message: `Dr. ${req.user.name} accepted your connection request.`,
+                relatedId: req.user.id
+            });
+        }
+
+        res.status(200).json({ message: `Request ${status}`, request });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
     }
 };
 
 module.exports = {
+    getDoctorPatients,
     generateConnectionCode,
-    getMyPatients,
-    getPatientLogs,
-    prescribeMedication,
-    connectWithDoctor,
-    getMyPrescriptions,
-    updatePrescription,
-    deletePrescription,
+    getPatientLogsForDoctor,
     getDoctorAppointments,
-    updateAppointmentStatus
+    updateAppointmentStatus,
+    prescribeMedication,
+    getDoctorPrescriptions,
+    deletePrescription,
+    updatePrescription,
+    getConnectionRequests,
+    handleConnectionRequest
 };
