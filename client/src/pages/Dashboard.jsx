@@ -1,9 +1,15 @@
+import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { MedicationList } from '@/components/MedicationList';
 import { AppointmentList } from '@/components/AppointmentList';
 import { HealthLogList } from '@/components/HealthLogList';
-import { Pill, Calendar, Activity } from 'lucide-react';
+import { Pill, Calendar, Activity, Stethoscope, Link as LinkIcon, Trash2, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import api from '@/services/api';
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -32,6 +38,7 @@ export default function Dashboard() {
                 <OverviewCard icon={Pill} label="Medications" value="3 Active" color="blue" />
                 <OverviewCard icon={Calendar} label="Appointments" value="2 Upcoming" color="purple" />
                 <OverviewCard icon={Activity} label="Health Score" value="98%" color="green" />
+                <CareTeamCard />
             </div>
 
             <div className="grid gap-8 lg:grid-cols-3">
@@ -80,5 +87,143 @@ function OverviewCard({ icon: Icon, label, value, color }) {
                 <p className="text-xl font-bold">{value}</p>
             </div>
         </div>
+    );
+}
+
+function CareTeamCard() {
+    const [doctors, setDoctors] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [open, setOpen] = useState(false);
+    const [code, setCode] = useState('');
+    const [connectLoading, setConnectLoading] = useState(false);
+
+    const fetchDoctors = async () => {
+        try {
+            const { data } = await api.get('/patient/doctors');
+            setDoctors(data);
+        } catch (error) {
+            console.error('Failed to fetch doctors', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDoctors();
+    }, []);
+
+    const handleConnect = async () => {
+        if (!code) return;
+        setConnectLoading(true);
+        try {
+            await api.post('/doctor/connect', { connectionCode: code });
+            alert('Connected successfully!');
+            setCode('');
+            fetchDoctors();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to connect');
+        } finally {
+            setConnectLoading(false);
+        }
+    };
+
+    const handleRemove = async (doctorId) => {
+        if (!confirm('Are you sure you want to remove this doctor? They will no longer have access to your data.')) return;
+        try {
+            await api.delete(`/patient/doctors/${doctorId}`);
+            setDoctors(prev => prev.filter(d => d._id !== doctorId));
+        } catch (error) {
+            alert('Failed to remove doctor');
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <div className={`glass-card p-6 rounded-xl flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 cursor-pointer ${doctors.length === 0 ? 'border-dashed border-2 border-blue-200' : ''}`}>
+                    <div className="p-3 rounded-lg bg-blue-100 text-blue-600 shadow-sm">
+                        <Stethoscope className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">My Care Team</p>
+                        {loading ? (
+                            <p className="text-base font-bold text-muted-foreground">Loading...</p>
+                        ) : doctors.length > 0 ? (
+                            <p className="text-base font-bold text-blue-600">{doctors.length} Doctor{doctors.length !== 1 && 's'}</p>
+                        ) : (
+                            <p className="text-base font-bold text-blue-600">Connect Doctor</p>
+                        )}
+                    </div>
+                </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>My Care Team</DialogTitle>
+                    <DialogDescription>
+                        Manage the doctors who have access to your health data.
+                    </DialogDescription>
+                </DialogHeader>
+                
+                <div className="py-4 space-y-6">
+                    {/* List Existing Doctors */}
+                    {doctors.length > 0 && (
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-semibold flex items-center gap-2">
+                                <Users className="h-4 w-4" /> Current Doctors
+                            </h4>
+                            <ScrollArea className="h-[120px] rounded-md border p-2">
+                                <div className="space-y-2">
+                                    {doctors.map(doc => (
+                                        <div key={doc._id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border">
+                                            <div className="flex-1 min-w-0 mr-2">
+                                                <p className="font-medium text-sm truncate">{doc.name}</p>
+                                                <p className="text-xs text-muted-foreground truncate">{doc.email}</p>
+                                                {doc.specialization && <p className="text-xs text-blue-600">{doc.specialization}</p>}
+                                            </div>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                onClick={() => handleRemove(doc._id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </div>
+                    )}
+
+                    {/* Add New Doctor */}
+                    <div className="space-y-3 pt-2 border-t">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <UserPlus className="h-4 w-4" /> Add New Doctor
+                        </h4>
+                        <div className="grid gap-2">
+                            <p className="text-xs text-muted-foreground">
+                                Enter the 6-character code provided by your doctor.
+                            </p>
+                            <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="code"
+                                        placeholder="DOC-XXXX"
+                                        className="pl-10 uppercase tracking-widest font-mono"
+                                        value={code}
+                                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                                        maxLength={10}
+                                    />
+                                </div>
+                                <Button onClick={handleConnect} disabled={connectLoading || !code} className="bg-blue-600">
+                                    {connectLoading ? '...' : 'Add'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }

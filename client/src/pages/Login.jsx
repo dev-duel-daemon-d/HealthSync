@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Mail, Lock, Activity } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
+import heartbeat from "../../public/heartbeat.svg"
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -37,8 +38,8 @@ export default function Login() {
 
             <Card className="w-full max-w-md relative animate-scale-in shadow-2xl border-0 glass-card">
                 <CardHeader className="text-center space-y-4">
-                    <div className="mx-auto p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 w-fit shadow-lg animate-pulse">
-                        <Activity className="h-8 w-8 text-white" />
+                    <div className='flex justify-center'>
+                        <img src={heartbeat} width='70px' />
                     </div>
                     <CardTitle className="text-3xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                         Welcome to HealthSync

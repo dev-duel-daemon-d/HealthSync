@@ -43,10 +43,10 @@ export const AuthProvider = ({ children }) => {
         // We could fetch full user object if data doesn't contain all fields, but controller returns it.
     };
 
-    const register = async (name, email, password, role) => {
-        const { data } = await api.post('/auth/register', { name, email, password, role });
-        setToken(data.token);
+    const register = async (name, email, password, role, licenseNumber) => {
+        const { data } = await api.post('/auth/register', { name, email, password, role, licenseNumber });
         setUser(data);
+        localStorage.setItem('accessToken', data.token);
     };
 
     const logout = async () => {

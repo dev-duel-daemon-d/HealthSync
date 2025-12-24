@@ -1,4 +1,5 @@
 const Appointment = require('../models/Appointment');
+const Notification = require('../models/Notification');
 
 const getAppointments = async (req, res) => {
     try {
@@ -11,19 +12,40 @@ const getAppointments = async (req, res) => {
 
 const createAppointment = async (req, res) => {
     try {
-        const { doctorName, date, location, notes } = req.body;
+        const { doctorName, date, location, notes, doctor } = req.body;
+
+        console.log('--- CREATE APPOINTMENT DEBUG ---');
+        console.log('Request Body:', req.body);
 
         if (!doctorName || !date || !location) {
             return res.status(400).json({ message: 'Please complete required fields' });
         }
 
+        // Status defaults to 'upcoming' if self-booked, but 'pending' if requesting a real doctor
+        const initialStatus = doctor ? 'pending' : 'upcoming';
+
         const appointment = await Appointment.create({
             user: req.user.id,
             doctorName,
+            doctor, // Optional: The ID of the real doctor
             date,
             location,
-            notes
+            notes,
+            status: initialStatus
         });
+
+        console.log('Saved Appointment:', appointment);
+        console.log('-------------------------------');
+
+        // Notify Doctor if linked
+        if (doctor) {
+            await Notification.create({
+                user: doctor,
+                type: 'appointment',
+                message: `New appointment request from ${req.user.name} for ${new Date(date).toLocaleDateString()}`,
+                relatedId: appointment._id
+            });
+        }
 
         res.status(201).json(appointment);
     } catch (error) {

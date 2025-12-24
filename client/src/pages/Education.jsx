@@ -1,10 +1,22 @@
+import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, ExternalLink, Heart, Shield, Stethoscope, Video } from 'lucide-react';
+import { BookOpen, ExternalLink, Heart, Shield, Stethoscope, Video, Loader2, UserPlus, ArrowLeft, Send } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import api from '@/services/api';
 
 export default function Education() {
+    const [doctors, setDoctors] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [requesting, setRequesting] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectedDoctor, setSelectedDoctor] = useState(null);
+    const [note, setNote] = useState('');
+
     const resources = [
         {
             category: 'Conditions',
@@ -43,6 +55,47 @@ export default function Education() {
             readTime: '4 min read'
         }
     ];
+
+    const fetchDoctors = async () => {
+        setLoading(true);
+        try {
+            const { data } = await api.get('/doctor/all');
+            setDoctors(data);
+        } catch (error) {
+            console.error('Failed to load doctors', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConnect = async () => {
+        if (!selectedDoctor) return;
+        setRequesting(true);
+        try {
+            await api.post('/patient/request-connection', { 
+                doctorId: selectedDoctor._id,
+                note: note 
+            });
+            alert('Connection request sent!');
+            setSelectedDoctor(null);
+            setNote('');
+            setIsOpen(false);
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to send request');
+        } finally {
+            setRequesting(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchDoctors();
+        } else {
+            // Reset state when dialog closes
+            setSelectedDoctor(null);
+            setNote('');
+        }
+    }, [isOpen]);
 
     return (
         <Layout>
@@ -93,10 +146,97 @@ export default function Education() {
                         <h2 className="text-2xl font-bold mb-2">Need Professional Help?</h2>
                         <p className="text-blue-100">Connect with healthcare providers for personalized advice.</p>
                     </div>
-                    <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 border-none shadow-lg">
-                        <Stethoscope className="mr-2 h-5 w-5" />
-                        Find a Doctor
-                    </Button>
+                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 border-none shadow-lg">
+                                <Stethoscope className="mr-2 h-5 w-5" />
+                                Find a Doctor
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                                <DialogTitle>{selectedDoctor ? `Connect with Dr. ${selectedDoctor.name}` : 'Available Doctors'}</DialogTitle>
+                                <DialogDescription>
+                                    {selectedDoctor 
+                                        ? 'Send a request to share your health data with this doctor.' 
+                                        : 'Browse our network of healthcare professionals.'
+                                    }
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            {selectedDoctor ? (
+                                <div className="space-y-4 animate-slide-in">
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                                        <p className="font-semibold text-sm">Dr. {selectedDoctor.name}</p>
+                                        <p className="text-xs text-muted-foreground capitalize mb-1">{selectedDoctor.specialization || 'General Physician'}</p>
+                                        {selectedDoctor.licenseNumber && (
+                                            <Badge variant="outline" className="text-[10px] h-5">Lic: {selectedDoctor.licenseNumber}</Badge>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Add a Note (Optional)</label>
+                                        <Textarea 
+                                            placeholder="Briefly explain why you want to connect..." 
+                                            value={note}
+                                            onChange={(e) => setNote(e.target.value)}
+                                            rows={4}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 justify-end pt-2">
+                                        <Button variant="ghost" onClick={() => setSelectedDoctor(null)}>
+                                            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                                        </Button>
+                                        <Button onClick={handleConnect} disabled={requesting} className="bg-blue-600">
+                                            {requesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                                            Send Request
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <ScrollArea className="max-h-[400px] mt-4 pr-4">
+                                    {loading ? (
+                                        <div className="flex justify-center py-8">
+                                            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                        </div>
+                                    ) : doctors.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {doctors.map((doctor) => (
+                                                <div key={doctor._id} className="flex items-center justify-between p-4 rounded-xl border bg-slate-50 dark:bg-slate-900 transition-colors hover:border-blue-300">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                                            {doctor.name.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-sm">Dr. {doctor.name}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-xs text-muted-foreground capitalize">{doctor.specialization || 'General Physician'}</p>
+                                                                {doctor.licenseNumber && (
+                                                                    <span className="text-[10px] text-slate-400">• Lic: {doctor.licenseNumber}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline"
+                                                        onClick={() => setSelectedDoctor(doctor)}
+                                                        className="gap-2"
+                                                    >
+                                                        <UserPlus className="h-3 w-3" />
+                                                        Connect
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            No doctors available at the moment.
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            )}
+                        </DialogContent>
+                    </Dialog>
                 </div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
             </div>

@@ -16,9 +16,33 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['patient', 'caregiver'],
+        enum: ['patient', 'caregiver', 'doctor'],
         default: 'patient'
-    }
+    },
+    specialization: {
+        type: String
+    },
+    connectionCode: {
+        type: String,
+        unique: true,
+        sparse: true // Allows null/undefined values to not conflict
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'approved'
+    },
+    licenseNumber: {
+        type: String
+    },
+    doctors: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    patients: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

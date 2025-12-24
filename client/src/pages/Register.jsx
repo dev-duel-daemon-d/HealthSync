@@ -12,6 +12,7 @@ export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('patient');
+    const [licenseNumber, setLicenseNumber] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
@@ -22,7 +23,7 @@ export default function Register() {
         setLoading(true);
         setError('');
         try {
-            await register(name, email, password, role);
+            await register(name, email, password, role, licenseNumber);
             navigate('/');
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');
@@ -110,9 +111,25 @@ export default function Register() {
                                 >
                                     <option value="patient">Patient</option>
                                     <option value="caregiver">Caregiver</option>
+                                    <option value="doctor">Doctor (Provider)</option>
                                 </select>
                             </div>
                         </div>
+
+                        {role === 'doctor' && (
+                            <div className="space-y-2 animate-slide-up">
+                                <Label htmlFor="license" className="text-sm font-semibold">Medical License Number</Label>
+                                <Input
+                                    id="license"
+                                    placeholder="MD-12345-CA"
+                                    value={licenseNumber}
+                                    onChange={(e) => setLicenseNumber(e.target.value)}
+                                    className="h-11 border-2 focus:border-purple-600 transition-all duration-300"
+                                    required
+                                />
+                            </div>
+                        )}
+
                         <Button
                             type="submit"
                             className="w-full h-11 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"

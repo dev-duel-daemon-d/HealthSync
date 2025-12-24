@@ -1,0 +1,60 @@
+<svg width="300" height="300" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" /> <!-- Blue-ish -->
+      <stop offset="100%" style="stop-color:#9333ea;stop-opacity:1" /> <!-- Purple-ish -->
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <style>
+    .heart-wrapper {
+      transform-origin: center;
+      animation: heartbeat 1.5s ease-in-out infinite, blink 3s ease-in-out infinite;
+    }
+    
+    .electro-line {
+      fill: none;
+      stroke: white;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0px 0px 1px rgba(0,0,0,0.3));
+    }
+
+
+
+    /* Beat Animation: Scale up slightly twice like a heartbeat */
+    @keyframes heartbeat {
+      0% { transform: scale(1); }
+      14% { transform: scale(1.1); }
+      28% { transform: scale(1); }
+      42% { transform: scale(1.1); }
+      70% { transform: scale(1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Blink Animation: Slight opacity/brightness pulse */
+    @keyframes blink {
+      0%, 100% { opacity: 1; filter: brightness(1); }
+      50% { opacity: 0.85; filter: brightness(1.1); }
+    }
+  </style>
+
+  <g class="heart-wrapper">
+    <!-- Heart Shape -->
+    <path fill="url(#heartGrad)" d="M50 88 C 10 55 -5 30 15 15 C 28 5 45 12 50 25 C 55 12 72 5 85 15 C 105 30 90 55 50 88 Z" />
+    
+    <!-- ECG / Pulse Line -->
+    <!-- M startx starty, L x y (horizontal), L (up peak), L (down peak), L (return), L (end) -->
+    <path class="electro-line" d="M 20 50 L 35 50 L 42 32 L 52 68 L 60 45 L 65 50 L 80 50" />
+  </g>
+</svg>
+
+

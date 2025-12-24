@@ -10,6 +10,10 @@ const appointmentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    doctor: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     date: {
         type: Date,
         required: true
@@ -23,7 +27,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['upcoming', 'completed', 'cancelled'],
+        enum: ['upcoming', 'completed', 'cancelled', 'pending', 'confirmed'],
         default: 'upcoming'
     }
 }, { timestamps: true });

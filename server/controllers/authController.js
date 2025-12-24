@@ -20,7 +20,7 @@ const generateRefreshToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, licenseNumber } = req.body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please add all fields' });
@@ -37,12 +37,17 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Default status: Patients are approved immediately, Doctors are pending
+    const initialStatus = role === 'doctor' ? 'pending' : 'approved';
+
     // Create user
     const user = await User.create({
         name,
         email,
         password: hashedPassword,
-        role: role || 'patient'
+        role: role || 'patient',
+        status: initialStatus,
+        licenseNumber: licenseNumber || ''
     });
 
     if (user) {
@@ -61,6 +66,7 @@ const registerUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            status: user.status,
             token: generateAccessToken(user._id)
         });
     } else {
@@ -98,6 +104,7 @@ const loginUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            status: user.status,
             token: generateAccessToken(user._id)
         });
     } else {
@@ -112,6 +119,44 @@ const loginUser = async (req, res) => {
 const getMe = async (req, res) => {
     const user = await User.findById(req.user.id).select('-password');
     res.status(200).json(user);
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateProfile = async (req, res) => {
+    const user = await User.findById(req.user.id);
+
+    if (user) {
+        user.name = req.body.name || user.name;
+        // user.email = req.body.email || user.email; // Keep email immutable for now or require re-verification
+        
+        if (req.body.password) {
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(req.body.password, salt);
+        }
+
+        // Role specific fields
+        if (user.role === 'doctor') {
+            user.specialization = req.body.specialization || user.specialization;
+            user.licenseNumber = req.body.licenseNumber || user.licenseNumber;
+        }
+
+        const updatedUser = await user.save();
+
+        res.json({
+            _id: updatedUser.id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            status: updatedUser.status,
+            specialization: updatedUser.specialization,
+            licenseNumber: updatedUser.licenseNumber,
+            token: generateAccessToken(updatedUser._id)
+        });
+    } else {
+        res.status(404).json({ message: 'User not found' });
+    }
 };
 
 // @desc    Refresh access token
@@ -152,6 +197,7 @@ module.exports = {
     registerUser,
     loginUser,
     getMe,
+    updateProfile,
     refresh,
     logout
 };
