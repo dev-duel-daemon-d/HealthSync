@@ -4,9 +4,9 @@
 
 ---
 
-## 🚀 Key Features
+##  Key Features
 
-### 🏥 For Patients
+### -> For Patients
 
 - **Find & Connect with Specialists**: A searchable directory of doctors. Send connection requests with personalized notes to share your health data securely.
 - **Medication Management**: detailed tracking of prescriptions, dosages, and frequencies. Receive updates when your doctor changes your regimen.
@@ -15,7 +15,7 @@
 - **Education Hub**: Access curated health articles and guides.
 - **Secure Profile**: Manage personal details and change passwords securely.
 
-### 👨‍⚕️ For Doctors
+### -> For Doctors
 
 - **Patient Management**: View a list of connected patients and access their comprehensive health history.
 - **Connection Requests**: Accept or reject incoming requests from new patients.
@@ -25,7 +25,7 @@
 
 ---
 
-## 🛠️ Technology Stack
+## -> Technology Stack
 
 ### Frontend
 
@@ -90,7 +90,7 @@ HealthSync/
 
 ---
 
-## ⚡ Getting Started
+## -> Getting Started
 
 ### Prerequisites
 
@@ -167,7 +167,7 @@ HealthSync/
 
 ---
 
-## 📖 API Documentation
+## => API Documentation
 
 The API is prefixed with `/api`. Protected routes require a valid Bearer Token in the Authorization header.
 
@@ -203,7 +203,7 @@ The API is prefixed with `/api`. Protected routes require a valid Bearer Token i
 
 ---
 
-## 🛡️ Security Best Practices
+##  Security Best Practices
 
 - **HttpOnly Cookies**: Refresh tokens are stored in HttpOnly, SameSite=Strict cookies to prevent XSS attacks.
 - **Password Hashing**: User passwords are encrypted using bcryptjs before storage.
@@ -212,7 +212,7 @@ The API is prefixed with `/api`. Protected routes require a valid Bearer Token i
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 1.  Fork the repository.
 2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
